@@ -1,0 +1,77 @@
+###
+### File managed by Puppet
+###
+
+################################################################################
+# AGENT BEHAVIOUR
+
+<% if (@agentaddress.is_a?(Array)) and (@agentaddress.count > 0) -%>
+agentaddress <%= @agentaddress.join(',') %>
+<% end -%>
+
+################################################################################
+# ACCESS CONTROL
+
+# ------------------------------------------------------------------------------
+# Traditional Access Control
+#rocommunity <%= @ro_community %> <%= @ro_network %>
+<% if @rw_community -%>
+#rwcommunity <%= @rw_community %> <%= @rw_network %>
+<% end -%>
+
+# ------------------------------------------------------------------------------
+# VACM Configuration
+#       sec.name       source        community
+<% if @com2sec.any? -%>
+<% @com2sec.each do |com2sec| -%>
+com2sec <%= com2sec %>
+<% end -%>
+<% end -%>
+
+#       groupName      securityModel securityName
+<% if @groups.any? -%>
+<% @groups.each do |group| -%>
+group   <%= group %>
+<% end -%>
+<% end -%>
+
+#       name          incl/excl  subtree             mask(optional)
+<% @views.each do |view| -%>
+view    <%= view %>
+<% end -%>
+
+#       group          context sec.model sec.level prefix read       write notif
+<% @accesses.each do |access| -%>
+access  <%= access %>
+<% end -%>
+
+# ------------------------------------------------------------------------------
+# Typed-View Configuration
+
+################################################################################
+# SYSTEM INFORMATION
+
+# ------------------------------------------------------------------------------
+# System Group
+sysLocation <%= @location %>
+sysContact <%= @contact %>
+sysServices <%= @services %>
+sysName <%= @sysname %>
+
+################################################################################
+# EXTENDING AGENT FUNCTIONALITY
+
+<% if @dlmod.any? -%>
+# ------------------------------------------------------------------------------
+# Dynamically Loadable Modules
+<% @dlmod.each do |mod| -%>
+dlmod <%= mod %>
+<% end -%>
+
+<% end -%>
+################################################################################
+# OTHER CONFIGURATION
+
+<% @snmpd_config.each do |line| -%>
+<%= line %>
+<% end -%>
