@@ -1,0 +1,15 @@
+---
+classes:
+  - build_slaves::jenkins
+  - build_slaves::kube
+  - build_slaves::multipy
+
+build_slaves::jenkins::npmrc_password: ''
+build_slaves::jenkins::nexus_password: ''
+
+datadog_agent::tags:
+  - 'monitor:build_node'
+  - 'puppet_version:%{puppetversion}'
+  - 'dc:%{dd_autotag_colo}'
+  - 'external_ip:%{external_ip}'
+  - 'ubuntu_version:%{asfosrelease}'

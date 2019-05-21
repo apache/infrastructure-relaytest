@@ -1,0 +1,6 @@
+---
+classes:
+  - loggy
+
+base::basepackages:
+  - 'openjdk-8-jdk'

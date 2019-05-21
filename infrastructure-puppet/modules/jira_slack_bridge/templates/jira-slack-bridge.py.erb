@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+##############################################
+# Kludge JIRA changelog notifier for Slack,  #
+# for use until JIRA fixes itself or an      #
+# update for webhooks is released            #
+##############################################
+import os
+import sys
+import time
+import json
+import requests
+import slackclient
+import yaml
+import re
+
+CONFIG_FILE = "slackbridge.yaml"
+CONFIG = yaml.load(open(CONFIG_FILE))
+
+# JIRA REST API URL to query
+CHGURL = "https://issues.apache.org/jira/rest/api/2/search?jql=project=%s%%20AND%%20updated%%3E=-15m&expand=changelog&fields=changelog,summary,creator,description"
+JIRA_USER = '<%= @jirauser %>'
+JIRA_PASS = '<%= @jirapass %>'
+
+# Slack Token
+SLACK_TOKEN = "<%= @slacktoken %>"
+
+SC = slackclient.SlackClient(SLACK_TOKEN)
+
+def sendNotice(msg, cid, txt = None):
+    """ Quick shortcut to sending a payload to Slack """
+    SC.api_call(
+      "chat.postMessage",
+      channel=cid,
+      text = txt,
+      attachments  = msg
+    )
+    
+def newTicket(issue, cid):
+    """ Formatter for new tickets created """
+    author = issue['fields']['creator']['displayName']
+    key = issue['key']
+    title = issue['fields']['summary']
+    desc = issue['fields'].get('description')
+    if len(desc) > 200:
+        desc = desc[:199] + "..."
+    js =  [
+            {
+                "pretext": "*%s* created <https://issues.apache.org/jira/browse/%s|%s>: %s" % (author, key, key, title),
+                "title": "%s: %s" % (key, title),
+                "text": desc,
+                "mrkdwn_in": ["pretext"]
+            }
+        ]
+    
+    sendNotice(js, cid)
+    
+def showTicket(issue, cid):
+    """ Formatter for slack auto-linker """
+    key = issue['key']
+    title = issue['fields']['summary']
+    js =  [
+            {
+                "pretext": "<https://issues.apache.org/jira/browse/%s|%s>: %s" % (key, key, title),
+                "mrkdwn_in": ["pretext"]
+            }
+        ]
+    sendNotice(js, cid)
+    
+def parseChange(entry, cid):
+    """ Parse changelog and format it for humans """
+    author = entry['change']['author']['displayName']
+    title = entry['summary']
+    key = entry['key']
+    
+    action = ""
+    
+    # Ideally, we'll only need one or two changelog items to determine what happened.
+    # The rest are sugar that we don't need (yet), so break early.
+    for item in entry['change']['items']:
+        
+        # Changing resolution
+        if item.get('field') == 'resolution':
+            if not item.get('fromString'): # If changing from no res to a res, assume closing as $X
+                res = item.get('toString', "Unresolved")
+                action = "closed <https://issues.apache.org/jira/browse/%s|%s> as _%s_." % (key, key, res)
+                break # Don't need the rest
+            else:
+                oldres = item.get('fromString')
+                newres = item.get('toString', "Unresolved")
+                action = "changed the resolution of <https://issues.apache.org/jira/browse/%s|%s> from _%s_ to _%s_." % (key, key, oldres, newres)
+                break # Don't need the rest
+        
+        # WFI/WFU
+        if item.get('field') == 'status':
+            newstatus = item.get('toString')
+            action = "changed the status of <https://issues.apache.org/jira/browse/%s|%s> to *%s*." % (key, key, newstatus)
+            break
+        
+        # Assignee change
+        if item.get('field') == 'assignee':
+            assignee = item.get('toString', "Unknown gnome")
+            action = "assigned *%s* to <https://issues.apache.org/jira/browse/%s|%s>." % (assignee, key, key)
+        
+    if action:
+        js = [ # Leave a calling card for the ticket
+                {
+                    "title": "%s: %s" % (key, title)
+                }
+            ]
+        txt = "*%s* %s" % (author, action)
+        sendNotice(js, cid, txt)
+
+def main():
+    # Keep track of the last change and ticket we saw, so we know what's new
+    # This is determined on first run.
+    
+    ret = SC.api_call(
+      "conversations.list",
+      limit = 1000
+    )
+    
+    for chan in ret['channels']:
+        cname = chan['name'].replace('#', '')
+        cid = chan['id']
+        for k,v in CONFIG['subscriptions'].items():
+            thischan = v.get('channel', 'foo').replace('#', '')
+            if cname == thischan:
+                v['cid'] = cid
+                print("Found %s as %s, subbing it to %s" % (cname, cid, v.get('jira', 'FOO')))
+                sendNotice([{'text': "JIRA notifications for %s enabled..." % v.get('jira', 'FOO')}], cid)
+        
+    
+    last_ticket = {}
+    last_changeid = {}
+    firstRun = True
+    counter = 0
+    
+    if SC.rtm_connect():
+        while True:
+            events = SC.rtm_read()
+            # First slack events
+            for event in events:
+                if ('channel' in event and 'text' in event and event.get('type') == 'message'):
+                        channel = event['channel']
+                        text = event['text']
+                        m = re.search(r"\b([A-Z]+-\d+)\b", event['text'])
+                        if m and not event.get('bot_id'):
+                            url = "https://issues.apache.org/jira/rest/api/latest/issue/%s" % m.group(1)
+                            try:
+                                rv = requests.get(url).json()
+                                showTicket(rv, event['channel'])
+                            except:
+                                pass
+            
+            # Then JIRA events
+            if (counter % 2 == 0):
+                for k, entry in CONFIG['subscriptions'].items():
+                    if 'cid' in entry: # Only if we found the channel in slack
+                        jproject = entry.get('jira', 'NULL')
+                        cid = entry.get('cid')
+                        try:
+                            js = requests.get(CHGURL % jproject, auth = (JIRA_USER, JIRA_PASS)).json()
+                        except:
+                            print("Could not contact JIRA, faking empty reply")
+                            js = {
+                                'issues': []
+                            }
+                        changesets = []
+                        for issue in js['issues']:
+    
+                            for entry in issue['changelog']['histories']:
+                                chgid = int(entry['id'])
+    
+                                # New changelog entry and not first run?
+                                if not firstRun and chgid > last_changeid.get(k, 0):
+                                    changesets.append({
+                                        'key': issue['key'],
+                                        'summary': issue['fields']['summary'],
+                                        'change': entry
+                                    })
+                                if last_changeid.get(k, 0) < chgid:
+                                    last_changeid[k] = chgid
+    
+                            # Newly created issue?
+                            if len(issue['changelog']['histories']) == 0 and issue['key'] > last_ticket.get(k, 'A-000'):
+                                last_ticket[k] = issue['key'] 
+                                if not firstRun:
+                                    print("New JIRA ticket, %s, created!" % issue['key'])
+                                    newTicket(issue, cid)
+    
+                        print("Found %u changesets at %u" % (len(changesets), time.time()))
+                        for change in changesets:
+                            print("%s changed!" % change['key'])
+                            parseChange(change, cid)
+
+            firstRun = False
+            counter += 1
+            time.sleep(2)
+
+if __name__ == '__main__':
+    main()

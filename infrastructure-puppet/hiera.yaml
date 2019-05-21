@@ -1,0 +1,33 @@
+---
+
+## If you edit this file, you need to make sure that the webserver is restarted.
+
+
+:backends:
+    - yaml
+    - eyaml
+    - module_data
+
+:yaml:
+    :datadir: /etc/puppet/data
+
+:eyaml:
+    :datadir: /etc/puppet/data
+    :gpg_gnupghome: /var/lib/puppet/.gnupg
+    :gpgpghome: /var/lib/puppet/.gnupg
+    :gpg_always_trust: true
+
+# The ASF specific variables below are created in facter with customfact module.
+:hierarchy:
+    - "nodes/%{clientcert}"
+    - "roles/%{::noderole}"
+    - "%{::asfosname}/%{::asfosname}_%{::asfosrelease}"
+    - "colo/%{asfcolo}"
+    - "%{::virtual}/%{::asfosname}/%{::asfosname}_%{::asfosrelease}"
+    - "oem/%{oem}"
+    - "environment/%{::environment}"
+    - "common"
+
+:logger: console
+
+:merge_behavior: deeper

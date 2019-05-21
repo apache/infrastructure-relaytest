@@ -1,0 +1,6 @@
+---
+
+dnsclient::nameservers:
+  - '10.3.0.2'
+
+ldapclient::ldapservers: 'ldaps://ldap-us-ro.apache.org:636 ldaps://ldap-eu-ro.apache.org:636'

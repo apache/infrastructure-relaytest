@@ -1,0 +1,3 @@
+#!/usr/bin/perl
+exit 0 if ($ENV{SENDER} =~ m/\@apphosting\.bounces\.google\.com$/i);
+exit 99; # silently drop as this is listening on a private address

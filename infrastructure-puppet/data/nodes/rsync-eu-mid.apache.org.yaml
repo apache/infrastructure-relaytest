@@ -1,0 +1,44 @@
+---
+classes:
+  - apbackup
+  - apbackup::backup
+  - blocky
+  - datadog_asf::integrations::network
+  - loggy
+  - rootbin_asf
+  - rsync
+  - rsync::server
+  - rsync_mirror
+  - svnwcsub
+
+base::basepackages:
+- traceroute
+
+cron:
+  mirmon:
+    user: 'svnwc'
+    minute: [0,30]
+    hour: '*'
+    command: '/dist/zzz/update-files.sh'
+  checkrev:
+    user: 'svnwc'
+    minute: [10,40]
+    hour: '*'
+    command: '/dist/zzz/checkrev.py'
+
+rsync::package_ensure:                       'latest'
+rsync::server::use_xinetd:                   false
+rsync::server::gid:                          'nogroup' # group 'nobody' doesn't exist in ubuntu
+rsync::server::address:                      '' # both ipv4 and ipv6
+
+svnwcsub::gid:                               '9997'
+svnwcsub::uid:                               '9997'
+svnwcsub::conf_file:                         'svnwcsub.conf.dist'
+svnwcsub::conf_path:                         '/etc/'
+svnwcsub::groupname:                         'svnwc'
+svnwcsub::groups:
+  - 'svnwc'
+svnwcsub::service_ensure:                    'running'
+svnwcsub::service_name:                      'svnwcsub'
+svnwcsub::shell:                             '/bin/bash'
+svnwcsub::username:                          'svnwc'

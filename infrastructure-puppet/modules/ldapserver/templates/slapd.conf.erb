@@ -1,0 +1,403 @@
+## This file is managed by puppet, all local changes will be lost
+## during the next puppet catalog run
+
+
+#######################################################################
+# Global Directives:
+
+# Features to permit
+#allow bind_v2
+
+# Schema and objectClass definitions
+<%-
+@schemas.each do |schema|
+-%>
+include        /etc/ldap/schema/<%= schema %>.schema
+<%- end -%>
+
+# Where the pid file is put. The init.d script
+# will not stop the server if you change this.
+pidfile        /var/run/slapd/slapd.pid
+
+# List of arguments that were passed to the server
+argsfile        /var/run/slapd/slapd.args
+
+# Read slapd.conf(5) for possible values
+#loglevel        none
+loglevel        <%= @ldaploglevel %>
+
+# Where the dynamically loaded modules are stored
+modulepath      <%= @modulepath %>
+
+<%-
+@modules.each do |mod|
+-%>
+moduleload      <%= mod %>
+<%- end -%>
+
+# The maximum number of entries that is returned for a search operation
+sizelimit      <%= @sizelimit %>
+
+# The tool-threads parameter sets the actual amount of cpu's that is used
+# for indexing.
+tool-threads 2
+
+
+#######################################################################
+# Specific Backend Directives for @BACKEND@:
+# Backend specific directives apply to this backend until another
+# 'backend' directive occurs
+backend        <%= @backend %>
+
+
+#######################################################################
+# accesslog overlay config
+
+database mdb
+suffix cn=accesslog
+directory /var/lib/ldap/accesslog
+rootdn cn=accesslog
+maxsize <%= @maxsize %>
+index default eq
+index entryCSN,objectClass,reqEnd,reqResult,reqStart
+access to dn.subtree="cn=accesslog"
+ by dn.base="cn=root,dc=apache,dc=org" read
+ by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" read
+
+
+#######################################################################
+# Specific Directives for database #1, of type @BACKEND@:
+# Database specific directives apply to this databasse until another
+# 'database' directive occurs
+database        <%= @database %>
+
+# The base of your directory in database #1
+suffix          <%= @suffix %>
+directory      <%= @directory %>
+rootdn          <%= @rootdn %>
+rootpw          <%= @rootpw %>
+maxsize        <%= @maxsize %>
+
+overlay accesslog
+logdb cn=accesslog
+logops writes
+logsuccess TRUE
+logold (objectclass=*)
+
+# Indexing options for database #1
+<%-
+@indexes.each do |idx|
+-%>
+index          <%= idx %> eq
+<%- end -%>
+
+
+# Save the time that the entry gets modified, for database #1
+lastmod        on
+
+# Enforce TLS on ldap:// connections
+security tls=1
+
+# Define SSL Certs for LDAPS
+TLSCACertificateFile    <%= @cafile %>
+TLSCertificateFile      <%= @certfile %>
+TLSCertificateKeyFile   <%= @keyfile %>
+
+
+#######################################################################
+# Replication Directives:
+
+<%-
+  server_hash = @slapd_peers.select { |id, s| s == @fqdn }
+  server_id = server_hash.keys.first
+%>
+serverID <%= server_id %>
+
+<%-
+  ldap_servers = @slapd_peers.reject { |id, server| server == @fqdn }
+  ldap_servers.each do |id, server|
+-%>
+syncrepl rid=<%= id %>
+        provider=ldaps://<%= server %>:636
+        binddn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org"
+        bindmethod=simple
+        credentials="<%= @replcreds %>"
+        attrs="*,+"
+        searchbase="dc=apache,dc=org"
+        type=refreshAndPersist
+        retry="60 +"
+        interval=00:00:00:15
+        scope=sub
+
+<%- end -%>
+
+### Define replication and mirroring
+# Enable mirroring
+mirrormode      true
+
+# Enable replication synchronisation
+overlay syncprov
+
+#######################################################################
+# ACL Directives:
+
+############################################################################################
+# README:
+# If you add, or edit any ACL below ensure that the following lines are always included:
+#  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+#  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+#  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+
+# This will ensure that the APLDAP group can manage the LDAP tree, and that the records
+# are able to be replicated, and used for login accounts.
+
+# N.B.  Each object (and attribute) can only be specified once.  You must add to an existing
+# ACL if it exists.
+
+# Anonymous access should always be denied.
+
+# Specific ACL should always be placed at the top of the list.  Generic rules are
+# to be placed at the end.  Great care should be taken to check for any overlap, as this
+# will cause slapd to either not start, or deny access too the requested resource.
+
+# Access can only be granted if defined, otherwise the access will be managed by the last
+# rule. 'Catch All' at the end of this file.
+
+############################################################################################
+
+## Allow users, and selfserve to modify a users password.
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=userPassword
+  by self write
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-rw,ou=users,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=httpduser,ou=users,ou=services,dc=apache,dc=org" read
+  by * auth
+  by anonymous auth
+
+## Allow self & secretary@ to edit email addresses, and github username
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=mail,githubUsername
+  by self write
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-ro,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Allow secretary@ to edit listed attrs
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=cn
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-ro,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Allow users to edit a subset of their own personal attributes.
+## NOTE that mail,userPassword have been moved out to allow further access by others
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=sn,givenName,loginShell,asf-sascore,asf-pgpKeyFingerprint,sshPublicKey,asf-member-activeprojects,asf-member-affiliationurl,asf-member-affiliation,asf-member-personalurl,asf-member-status,asf-altEmail,asf-personalURL
+  by self write
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-ro,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Allow users to read thier ICLA data, but only allow secretary@
+## to edit it.
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=asf-icla-legalname,asf-icla-email,asf-icla-file
+  by self read
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-ro,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Make a user icla-publicname writable by 'self' and readable by
+## any authenticated user.
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=asf-icla-publicname
+  by self write
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=idao-ro,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Explictly make people writable by apldap (root@ equiv) and the ASF Secretary Group
+access to dn.subtree="ou=people,dc=apache,dc=org"
+  attrs=children,entry
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Allow PMC chairs, and Hudson admins to grant job admin privs
+access to dn.subtree="ou=hudson,ou=apps,ou=groups,dc=apache,dc=org"
+  attrs=memberUid,member,owner
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=pmc-chairs,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=hudson-admin,ou=groups,ou=services,dc=apache,dc=org" write
+  by dnattr=owner write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Explictly make groups (PMCs) writable by apldap (root@ equiv) and the ASF Secretary Group
+access to dn.subtree="ou=groups,dc=apache,dc=org"
+  attrs=children,entry
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Allow members of auth groups to edit their own groups.
+access to dn.subtree="ou=auth,ou=groups,dc=apache,dc=org"
+  attrs=memberUid,member
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dnattr=member write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Allow ASF Members, PMC chairs, and members of a [P]PMC to edit group memberships.
+access to dn.subtree="ou=groups,dc=apache,dc=org"
+  attrs=memberUid,member,owner
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=pmc-chairs,ou=groups,ou=services,dc=apache,dc=org" write
+  by set="[cn=member,ou=groups,dc=apache,dc=org]/memberUid & user/uid" write
+  by dnattr=owner write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Explictly make the pmc-chairs group writable only to apldap (root@ equiv) and the ASF Secretary Group
+access to dn.exact="cn=pmc-chairs,ou=groups,ou=services,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Explictly make the asf-secretary group writable by apldap (root@ equiv) and the ASF Secretary Group
+access to dn.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## Explictly make the board group writable by apldap (root@ equiv), the ASF Secretary Group, and the board itself
+access to dn.exact="cn=board,ou=groups,ou=services,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=asf-secretary,ou=groups,ou=services,dc=apache,dc=org" write
+  by group.exact="cn=board,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Explictly make the sudoers OU writable only to apldap (root@ equiv)
+access to dn.subtree="ou=sudoers,ou=groups,ou=services,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Make the services OU writable only to apldap (root@ equiv)
+## This OU contains many of the ACL derivatives that allow elevated
+## privleges, such as the apldap group.
+access to dn.subtree="ou=services,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+
+## Allow 'self' to edit subset of own attrs, even in the sandbox.
+access to dn.subtree="ou=sandbox,dc=apache,dc=org"
+  attrs=mail,sn,givenName,userPassword
+  by self write
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" auth
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * auth
+  by anonymous none
+
+## Restrict sandbox, unless explictly configured.
+access to dn.subtree="ou=sandbox,dc=apache,dc=org"
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous auth
+
+## DO NOT MODIFY THIS LAST 'CATCH ALL' RULE.  IT COVERS EVERTHING THAT
+## IS NOT EXPLICITLY COVERED AVOVE.
+
+## Catch all, explicitly allow anything not covered above.
+## includes crowd write access
+access to *
+  by group.exact="cn=apldap,ou=groups,ou=services,dc=apache,dc=org" write
+  by dn="cn=crowd_ldap,ou=users,ou=services,dc=apache,dc=org" write
+  by dn="cn=ldaprepl,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org" read
+  by dn="cn=nss_p6,ou=users,ou=services,dc=apache,dc=org" read
+  by * read
+  by anonymous none
+
+# The root DIT should be accessible to all clients
+access to dn.exact=""
+  by * read
+
+# So should the schema
+access to dn.subtree="cn=Subschema"
+  by * read
+

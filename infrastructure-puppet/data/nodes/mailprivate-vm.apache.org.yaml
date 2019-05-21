@@ -1,0 +1,306 @@
+---
+classes:
+  - apache
+  - apache::mod::authnz_ldap
+  - apache::mod::include
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::rewrite
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::custom_config
+  - vhosts_asf::modules
+  - vhosts_asf::vhosts
+  - mail_private
+
+mail_private::parent_dir: '/x1'
+
+apache::default_vhost: false
+apache::default_ssl_cert:                    '/etc/ssl/certs/wildcard.apache.org.crt'
+apache::default_ssl_chain:                   '/etc/ssl/certs/wildcard.apache.org.chain'
+apache::default_ssl_key:                     '/etc/ssl/private/wildcard.apache.org.key'
+
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '500'
+apache::mod::event::maxconnectionsperchild: '20000'
+apache::mod::event::maxrequestworkers: '300'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '10'
+apache::mod::event::serverlimit: '6'
+apache::mod::event::startservers: '2'
+apache::mod::event::threadlimit: '300'
+apache::mod::event::threadsperchild: '50'
+
+apache::purge_vhost_dir: false
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+vhosts_asf::modules::modules:
+  mbox:
+    name: 'mbox'
+  macro:
+    name: 'macro'
+
+# define custom config file to check for ASF membership
+# This is needed to allow the use of conflicting LDAP settings within a RequireAny block
+apache::custom_config:
+  authz_ldap_group_member:
+    content: |
+      <AuthzProviderAlias ldap-group ldap-group-member cn=member,ou=groups,dc=apache,dc=org>
+         AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+         AuthLDAPGroupAttribute memberUid
+         AuthLDAPGroupAttributeIsDN Off
+      </AuthzProviderAlias>
+
+vhosts_asf::vhosts::vhosts:
+
+  mail-private:
+    vhost_name: '*'
+    port: 80
+    servername: 'mailprivate-vm.apache.org'
+    serveraliases:
+      - 'mail-private.apache.org'
+    default_vhost: true
+    docroot: '/x1/mail-private.apache.org/'
+    serveradmin: 'root@apache.org'
+    access_log_file: 'mail-private.apache.org.access.log'
+    error_log_file: 'mail-private.apache.org.error.log'
+    custom_fragment: |
+      Redirect permanent / https://mail-private.apache.org/
+
+  mail-private-ssl:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 443
+    ssl: true
+    servername: 'mailprivate-vm.apache.org'
+    serveraliases:
+      - 'mail-private.apache.org'
+    serveradmin: 'root@apache.org'
+    docroot: '/x1/mail-private.apache.org/'
+    access_log_file: 'mail-private.apache.org-ssl_access.log'
+    error_log_file: 'mail-private.apache.org-ssl_error.log'
+    custom_fragment: |
+      #aliases
+      Alias /members/private-arch /x1/mail-private.apache.org/mod_mbox
+      Alias /pmc/private-arch /x1/mail-private.apache.org/mod_mbox
+
+      AddHandler mbox-handler .mbox
+
+      <Macro MacroMboxPMC $dir $pmc $cn>
+      <LocationMatch ^/pmc/private-arch/$dir(.*)>
+        ## Either PMC member or ASF member
+        <RequireAny>
+            AuthType Basic
+            AuthBasicProvider ldap
+            AuthName "$pmc - PMC or ASF members."
+            AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+            <RequireAll>
+              AuthLDAPGroupAttribute owner
+              AuthLDAPGroupAttributeIsDN On
+              AuthLDAPRemoteUserIsDN On
+              Require ldap-group cn=$cn,ou=project,ou=groups,dc=apache,dc=org
+            </RequireAll>
+           <RequireAll>
+             # uses authz_ldap_group_member custom config
+             Require ldap-group-member
+           </RequireAll>
+        </RequireAny>
+      </LocationMatch>
+      </Macro>
+
+      <Macro MacroMboxMembers $dir>
+      # Redirect /pmc/private-arch/$dir /members/private-arch/$dir
+      <LocationMatch ^/pmc/private-arch/$dir(.*)>
+        <RequireAll>
+          AuthType Basic
+          AuthBasicProvider ldap
+          AuthName "ASF Members only."
+          AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPGroupAttribute memberUid
+          AuthLDAPGroupAttributeIsDN Off
+          Require ldap-group cn=member,ou=groups,dc=apache,dc=org
+        </RequireAll>
+      </LocationMatch>
+      </Macro>
+
+      # Allow committers access to certain 'private' lists (see gen-httpdconfig.sh)
+      <Macro MacroMboxCommitters $dir>
+      <LocationMatch ^/pmc/private-arch/$dir(.*)>
+        <RequireAll>
+          AuthType Basic
+          AuthBasicProvider ldap
+          AuthName "ASF Committers (/pmc/)"
+          AuthLDAPurl "ldaps://ldap-us-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPGroupAttribute member
+          AuthLDAPGroupAttributeIsDN on
+          Require ldap-group cn=committers,ou=role,ou=groups,dc=apache,dc=org
+        </RequireAll>
+      </LocationMatch>
+      </Macro>
+
+      ## We dont provide search any more, however ...
+      <Location /search>
+        # Lets add some redirect to lists.a.o here maybe ?
+      </Location>
+
+      ## Allow the committers group to use the dropdown list.
+      ## This is needed to see what lists are available.
+      <LocationMatch ^/pmc/$>
+      <RequireAll>
+        AuthType Basic
+        AuthBasicProvider ldap
+        AuthName "ASF Committers (/pmc/)"
+        AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPGroupAttribute member
+        AuthLDAPGroupAttributeIsDN on
+        Require ldap-group cn=committers,ou=role,ou=groups,dc=apache,dc=org
+      </RequireAll>
+      Options +Indexes
+      </LocationMatch>
+
+      # Default permissions for private-arch directories that aren't mentioned by mail-private-pmcs.macro
+      # (e.g., new lists since last time it ran)
+      # Also default mod_mbox settings.
+      <Location /pmc/private-arch>
+        MboxIndex On
+        MboxRootPath "/pmc/private-arch/"
+        MboxStyle "/assets/style.css"
+        MboxScript "/assets/archives.js"
+        MboxHideEmpty On
+        MboxAntispam On
+        <RequireAll>
+          AuthType Basic
+          AuthBasicProvider ldap
+          AuthName "ASF Members (/pmc/private-arch residual)"
+          AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPGroupAttribute memberUid
+          AuthLDAPGroupAttributeIsDN off
+          Require ldap-group cn=member,ou=groups,dc=apache,dc=org
+        </RequireAll>
+        Options +Indexes
+      </Location>
+
+      ## Now include the config file that will explictly list all PMCs with configured access.
+      Include /etc/apache2/sites-enabled/mail-private-pmcs.macro
+
+      # Allow members full access from here.
+      <Location /members/private-arch>
+        MboxIndex On
+        MboxRootPath "/members/private-arch/"
+        MboxStyle "/assets/style.css"
+        MboxScript "/assets/archives.js"
+        MboxHideEmpty On
+        MboxAntispam On
+        <RequireAll>
+          AuthType Basic
+          AuthBasicProvider ldap
+          AuthName "ASF Members (/members/private-arch)"
+          AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPGroupAttribute memberUid
+          AuthLDAPGroupAttributeIsDN off
+          Require ldap-group cn=member,ou=groups,dc=apache,dc=org
+        </RequireAll>
+        Options +Indexes
+      </Location>
+
+      # direct access should be members-only or maybe redirect?
+      <Location /mod_mbox>
+        <RequireAll>
+          AuthType Basic
+          AuthBasicProvider ldap
+          AuthName "ASF Members Only"
+          AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPGroupAttribute memberUid
+          AuthLDAPGroupAttributeIsDN off
+          Require ldap-group cn=member,ou=groups,dc=apache,dc=org
+        </RequireAll>
+      </Location>
+
+      # maintain permalinks for renamed lists (members only)
+      RedirectMatch Permanent ^/members/private-arch/apachecon-(barcamp|fastfeather|speakers)-2011-NA /members/private-arch/apachecon-$1-2011-na
+
+      <Macro RenameList $old $new>
+        RedirectMatch Permanent "^/members/private-arch/$old($|/.*$)" "/members/private-arch/$new$1"
+      </Macro>
+
+      Use RenameList "code-awards"            "community-mentors"
+      Use RenameList "infrastructure"         "infra-users"
+      Use RenameList "infrastructure-private" "infra-private"
+      # migrated then closed down
+      Use RenameList "infrastructure-tools"   "infra-tools"
+
+      # Public list initially created as private
+      <Macro PublicList $name>
+        RedirectMatch Permanent "^/(pmc|members)/private-arch/$name($|/.*$)" "http://mail-archives.apache.org/mod_mbox/$name$2"
+      </Macro>
+
+      Use PublicList "batchee-dev"
+      Use PublicList "bigtop-issues"
+      Use PublicList "lens-commits"
+      Use PublicList "olingo-user"
+      Use PublicList "reef-dev"
+      Use PublicList "sirona-dev"
+
+      # project renames
+
+      # Make sure the new directory structure has been set up before adding a redirect
+
+      #      ** remember to update mailarchive-vm.apache.org.yaml as well **
+
+      # Use Redirect here so auth works and user sees updated URL
+      <Macro RenameProject $old $new>
+        RedirectMatch Permanent "^/(pmc|members)/private-arch/$old-(.*)" "/$1/private-arch/$new-$2"
+        RedirectMatch Permanent "^/(pmc|members)/private-arch/incubator-$old-(.*)" "/$1/private-arch/incubator-$new-$2"
+      </Macro>
+
+      Use RenameProject "amber"        "oltu"
+      Use RenameProject "argus"        "ranger"
+      Use RenameProject "callback"     "cordova"
+      Use RenameProject "connectors"   "manifoldcf"
+      Use RenameProject "deft"         "awf"
+      Use RenameProject "fleece"       "johnzon"
+      Use RenameProject "mysos"        "cotton"
+      Use RenameProject "ooo"          "openoffice"
+      Use RenameProject "openejb"      "tomee"
+      Use RenameProject "optiq"        "calcite"
+      Use RenameProject "oscar"        "felix"
+      Use RenameProject "quarks"       "edgent"
+      Use RenameProject "rat "         "creadur"
+      Use RenameProject "senssoft"     "flagon"
+      Use RenameProject "stratosphere" "flink"
+      Use RenameProject "zest"         "polygene"
+
+      #sub-project renames
+      Use RenameProject "lucene-lucene-net" "lucenenet"
+
+      # Originally private; now public (INFRA-12769)
+      RedirectMatch Permanent "^/(pmc|members)/private-arch/metamodel-issues/" "http://mail-archives.apache.org/mod_mbox/metamodel-issues/"
+
+      # Conditional incubator renames
+
+      AllowEncodedSlashes On
+      RewriteEngine On
+
+      # Redirect incubator-name-list to name-list if the former does not exist and the latter does
+      # This allows for graduated podlings
+      # %1 = pmc/members; %2 = incubator list; %3 = rest of path
+      RewriteCond %%{}{REQUEST_URI} ^/(pmc|members)/private-arch/incubator-([^/]+)($|/.*$)
+      RewriteCond /x1/mail-private.apache.org/mod_mbox/incubator-%2 !-d
+      RewriteCond /x1/mail-private.apache.org/mod_mbox/%2 -d
+      # Use Redirect so auth works and user sees updated URL
+      RewriteRule . /%1/private-arch/%2%3 [L,R=301]
+
+      # Redirect prefix-(p)pmc to prefix-private if the former does not exist and the latter does
+      # This allows for (p)pmc lists that were renamed to private
+      # Note that depot-ppmc and derby-ppmc were not renamed as they were already closed
+      # Ditto avalon-pmc and commons-pmc
+      # %1 = pmc|members; %2 = prefix; %3 = p?pmc; %4 = rest of path
+      RewriteCond %%{}{REQUEST_URI} ^/(pmc|members)/private-arch/([^/]+)-(p?pmc)($|/.*$)
+      RewriteCond /x1/mail-private.apache.org/mod_mbox/%2-%3 !-d
+      RewriteCond /x1/mail-private.apache.org/mod_mbox/%2-private -d
+      # Use Redirect so auth works and user sees updated URL
+      RewriteRule . /%1/private-arch/%2-private%4 [L,R=301]

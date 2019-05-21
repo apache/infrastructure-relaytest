@@ -1,0 +1,72 @@
+# Sample script to extract ezmlm archive files into mbox format
+
+# Parameters:
+# - domain
+# - listname
+# - prefix for From line (get this from existing archive)
+# - suffix for From line (get this from existing archive)
+# - century
+# - space separated message numbers in range 00-99
+# Note: the prefix and suffix are difficult to derive because they depend on historic info;
+# they may vary over time
+
+# sample params:
+# infra.apache.org users infrastructure apmail-infrastructure-archive=apache.org@apache.org 238 37 38 39
+
+DOM=${1:?domain e.g. infra.apache.org}
+shift
+
+LIST=${1:?list e.g. users}
+shift
+
+BASE=${ARCH_BASE:-/home/apmail/lists/${DOM}/${LIST}/archive}
+# The above directory contains directories with upto 100 files in each, numbered 00-99
+
+if [ ! -d $BASE ]
+then
+    echo Cannot find $BASE >&2
+    exit 1
+fi
+
+PFX=${1:?pfx e.g. infrastructure}
+shift
+
+SFX=${1:?sfx e.g. apmail-infrastructure-archive=apache.org@apache.org}
+shift
+
+# century
+CC=${1:?Century}
+shift
+
+if [ ! -d $BASE/$CC ]
+then
+    echo Cannot find $BASE/$CC >&2
+    exit 1
+fi
+
+# for each lower number
+for DD in $*
+do
+  echo Fetching $CC/$DD
+  FILE=$BASE/$CC/$DD
+  if [ -r $FILE ]
+  then
+      # assume file mod time is close to archive time
+      MTIME=$(stat -f "%m"  $FILE)
+      # get date in asctime format
+      STAMP=$(date -r $MTIME '+%a %b %d %T %Y')
+      {
+        # Drop leading zeros
+        NUM=$(echo $CC$DD | sed -e 's/^0*//')
+        echo "From $PFX-return-$NUM-$SFX $STAMP"
+        # munge From_ lines
+        sed -e 's/^\(>*From \)/>\1/' $FILE
+        # mboxrd allows for reversible conversion if treated as such
+        # Other combinations only work for plain '^From '
+        # add separator between messages so files can just be concatenated
+        echo ""
+      } >${DOM}_${LIST}_$CC$DD.tmp
+  else
+    echo Cannot find $FILE >&2
+  fi
+done

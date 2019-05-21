@@ -1,0 +1,218 @@
+---
+classes:
+  - apache
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::rewrite
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::modules
+  - vhosts_asf::vhosts
+  - vhosts_asf::custom_config
+  - mail_archives
+
+mail_archives::parent_dir: '/x1'
+
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::timeout: 600
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '500'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '500'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '150'
+apache::mod::event::serverlimit: '10'
+apache::mod::event::startservers: '5'
+apache::mod::event::threadlimit: '500'
+apache::mod::event::threadsperchild: '50'
+
+apache::default_ssl_cert:                    '/etc/ssl/certs/wildcard.apache.org.crt'
+apache::default_ssl_chain:                   '/etc/ssl/certs/wildcard.apache.org.chain'
+apache::default_ssl_key:                     '/etc/ssl/private/wildcard.apache.org.key'
+
+vhosts_asf::modules::modules:
+  mbox:
+    name: 'mbox'
+  macro:
+    name: 'macro'
+
+# Custom config file to perform renames
+# This defines a composite macro that can be referenced in both hosts
+apache::custom_config:
+  macros:
+    content: |
+      # Rename a project by prefix
+      <Macro RenameProject $old $new>
+        RedirectMatch Permanent "^/mod_mbox/$old-(.*)" "/mod_mbox/$new-$1"
+        RedirectMatch Permanent "^/mod_mbox/incubator-$old-(.*)" "/incubator-mod_mbox/$new-$1"
+      </Macro>
+
+      # Rename a list (don't match trailing characters)
+      <Macro RenameList $old $new>
+        RedirectMatch Permanent "^/mod_mbox/$old($|/.*$)" "/mod_mbox/$new$1"
+      </Macro>
+
+      # group all the renames together
+      # keep in synch with renames in mailprivate-vm.a.o.yaml
+      # (once new files have been indexed)
+      <Macro Renames>
+        Use RenameProject "amber"        "oltu"
+        Use RenameProject "argus"        "ranger"
+        Use RenameProject "callback"     "cordova"
+        Use RenameProject "connectors"   "manifoldcf"
+        Use RenameProject "deft"         "awf"
+        Use RenameProject "fleece"       "johnzon"
+        Use RenameProject "mysos"        "cotton"
+        Use RenameProject "ooo"          "openoffice"
+        Use RenameProject "openejb"      "tomee"
+        Use RenameProject "optiq"        "calcite"
+        Use RenameProject "oscar"        "felix"
+        Use RenameProject "quarks"       "edgent"
+        Use RenameProject "rat "         "creadur"
+        Use RenameProject "senssoft"     "flagon"
+        Use RenameProject "stratosphere" "flink"
+        Use RenameProject "zest"         "polygene"
+
+        # sub-project moved to TLP
+        Use RenameProject "lucene-lucene-net" "lucenenet"
+         # since retired:
+        Use RenameProject "ws-tuscany"        "tuscany"
+        Use RenameProject "zookeeper-bookkeeper" "bookkeeper"
+
+        # Xalan moved to TLP but renamed a list, so match that first:
+        Use RenameList    "xml-xalan-cvs" "xalan-commits"
+        Use RenameProject "xml-xalan"     "xalan"
+
+        # list moved to sub-project
+        RedirectMatch Permanent "^/mod_mbox/(distributedlog-.+)" "/mod_mbox/bookkeeper-$1"
+ 
+        # lists moved to different TLP
+        # since retired:
+        RedirectMatch Permanent "^/mod_mbox/ws-(wsrp4j-(dev|user).*)" "/mod_mbox/portals-$1"
+
+        # Jakarta closed down
+        Use RenameList "jakarta-lucene-dev"  "lucene-dev"
+        # and java-dev was then renamed: 
+        Use RenameList "lucene-java-dev"     "lucene-dev"
+        Use RenameList "jakarta-lucene-user" "lucene-java-user"
+        RedirectMatch Permanent "^/mod_mbox/jakarta-(jmeter-(dev|user).*)" "/mod_mbox/$1"
+        RedirectMatch Permanent "^/mod_mbox/jakarta-(struts-(dev|user).*)" "/mod_mbox/$1"
+        RedirectMatch Permanent "^/mod_mbox/jakarta-(log4j-(dev|user).*)" "/mod_mbox/logging-$1"
+        Use RenameList "jakarta-gump"  "gump-general"
+
+        # individual list renames
+        Use RenameList "jclouds-issues"  "jclouds-notifications"
+        Use RenameList "libcloud-commits" "libcloud-notifications"
+        Use RenameList "incubator-libcloud" "libcloud-dev"
+        Use RenameList "ws-general" "ws-dev"
+        Use RenameList "www-infrastructure-issues" "infra-issues"
+
+        # commons-dev@xml.apache.org => xml-commons-dev@xerces.apache.org
+        Use RenameList "xml-commons-dev" "xerces-xml-commons-dev"
+
+        # rpc-user@xml.apache.org => xmlrpc-user@ws.apache.org => users@ws.apache.org
+        Use RenameList "xml-rpc-user"    "ws-users"
+        Use RenameList "ws-xmlrpc-user"  "ws-users"
+
+        Use RenameList "xml-soap-dev"    "ws-soap-dev"
+        Use RenameList "xml-soap-user"   "ws-soap-user"
+
+        # axis-(dev|user)@xml.apache.org => axis-(dev|user)@ws.apache.org => java-(dev|user)@axis.apache.org
+        RedirectMatch Permanent "^/mod_mbox/xml-axis-((dev|user).*)" "/mod_mbox/axis-java-$1"
+        RedirectMatch Permanent "^/mod_mbox/ws-axis-((dev|user).*)" "/mod_mbox/axis-java-$1"
+
+        # Renamed on graduation
+        # empire-db-* => empire-*
+        RedirectMatch Permanent "^/mod_mbox/incubator-empire-db-(.*)" "/mod_mbox/empire-$1"
+        # oozie-users => oozie-user
+        RedirectMatch Permanent "^/mod_mbox/incubator-oozie-users($|/.*$)" "/mod_mbox/oozie-user$1"
+      </Macro>
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+vhosts_asf::vhosts::vhosts:
+  mailarchives-80:
+    vhost_name: '*'
+    port: 80
+    servername: 'mailarchive-vm.apache.org'
+    serveraliases:
+      - 'mail-archives.apache.org'
+    default_vhost: true
+    docroot: '/x1/mail-archives.apache.org/'
+    access_log_file: 'mail-archives.apache.org_access.log'
+    error_log_file: 'mail-archives.apache.org_error.log'
+
+   # N.B. This host does NOT automatically redirect to https, so all the settings
+   # need to be duplicated for the https host
+
+    custom_fragment: |
+      <Directory /x1/mail-archives.apache.org>
+        AllowOverride none
+        Options Indexes FollowSymLinks
+        Order allow,deny
+        Allow from all
+
+        AddHandler mbox-handler .mbox
+        MboxIndex on
+        MboxRootPath /mod_mbox/
+        MboxStyle /archives/style.css
+        MboxScript /archives/archives.js
+      </Directory>
+
+      # Redirect lists that have been renamed
+      # must be done before incubator renames
+      Use Renames
+
+      # Redirect incubator-name-list to name-list if the former does not exist and the latter does
+      # This allows for graduated podlings
+      AllowEncodedSlashes On
+      RewriteEngine On
+      RewriteCond %%{}{REQUEST_URI} ^/mod_mbox/incubator-([^/]+)($|/.*$)
+      RewriteCond /x1/mail-archives.apache.org/mod_mbox/incubator-%1 !-d
+      RewriteCond /x1/mail-archives.apache.org/mod_mbox/%1 -d
+      # use Redirect so user sees updated URL
+      RewriteRule . /mod_mbox/%1%2 [L,R=301]
+
+  mailarchives-443:
+    vhost_name: '*'
+    port: 443
+    ssl: true
+    servername: 'mailarchive-vm.apache.org'
+    serveraliases:
+      - 'mail-archives.apache.org'
+    docroot: '/x1/mail-archives.apache.org/'
+    access_log_file: 'mail-archives.apache.org-ssl_access.log'
+    error_log_file: 'mail-archives.apache.org-ssl_error.log'
+
+    # N.B. keep the following settings in sync with the http host settings
+
+    custom_fragment: |
+      <Directory /x1/mail-archives.apache.org>
+        AllowOverride none
+        Options Indexes FollowSymLinks
+        Order allow,deny
+        Allow from all
+        AddHandler mbox-handler .mbox
+        MboxIndex on
+        MboxRootPath /mod_mbox/
+        MboxStyle /archives/style.css
+        MboxScript /archives/archives.js
+      </Directory>
+
+      # Redirect lists that have been renamed
+      # must be done before incubator renames
+      Use Renames
+
+      # Redirect incubator-name-list to name-list if the former does not exist and the latter does
+      # This allows for graduated podlings
+      AllowEncodedSlashes On
+      RewriteEngine On
+      RewriteCond %%{}{REQUEST_URI} ^/mod_mbox/incubator-([^/]+)($|/.*$)
+      RewriteCond /x1/mail-archives.apache.org/mod_mbox/incubator-%1 !-d
+      RewriteCond /x1/mail-archives.apache.org/mod_mbox/%1 -d
+      # use Redirect so user sees updated URL
+      RewriteRule . /mod_mbox/%1%2 [L,R=301]

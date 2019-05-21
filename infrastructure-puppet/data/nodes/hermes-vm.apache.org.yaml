@@ -1,0 +1,99 @@
+---
+classes: 
+  - blocky
+  - rsync::server
+  - ssl::name::wildcard_apache_org
+  - loggy
+  - qmail_asf
+
+apt::sources:
+  'asf_internal':
+    location: 'https://packages.apache.org/asf_internal'
+    release: 'xenial'
+    repos: 'main'
+    key:
+      id: '390EF70BB1EA12B2773962950EE62FB37A00258D'
+      server: 'pool.sks-keyservers.net'
+    include:
+      deb: true
+      src: false
+    notify_update: true
+  'elasticsearch-5.x':
+    location: 'https://artifacts.elastic.co/packages/5.x/apt'
+    release: 'stable'
+    repos: 'main'
+    key:
+      id: '46095ACC8548582C1A2699A9D27D666CD88E42B4'
+      server: 'pool.sks-keyservers.net'
+    include:
+      deb: true
+      src: false
+  'puppetlabs':
+    location: 'https://apt.puppetlabs.com'
+    release: 'xenial'
+    repos: 'main'
+    key:
+      id: '6F6B15509CF8E59E6E469F327F438280EF8D349F'
+      server: 'keyserver.ubuntu.com'
+    include:
+      deb: true
+      src: false
+  'puppetdeps':
+    location: 'https://apt.puppetlabs.com'
+    release: 'xenial'
+    repos: 'dependencies'
+    key:
+      id: '6F6B15509CF8E59E6E469F327F438280EF8D349F'
+      server: 'keyserver.ubuntu.com'
+    include:
+      deb: true
+      src: false
+  'certbot':
+    ensure: 'present'
+    location: 'http://ppa.launchpad.net/certbot/certbot/ubuntu'
+    release: 'xenial'
+    repos: 'main'
+    key:
+        id: '7BF576066ADA65728FC7E70A8C47BE8E75BCA694'
+        server: 'hkp://keyserver.ubuntu.com:80'
+    include:
+        src: false
+        deb: true
+  'netqmail':
+    ensure: 'present'
+    location: 'http://ppa.launchpad.net/rbuterbaugh/netqmail/ubuntu'
+    release: 'xenial'
+    repos: 'main'
+    key:
+        id: '31282CEAA5467838BFDE5601FC2263BB973B991C'
+        server: 'hkp://keyserver.ubuntu.com:80'
+    include:
+        src: false
+        deb: true
+
+# qmail_asf class variables.
+
+qmail_asf::parent_dir: '/x1'
+qmail_asf::ezmlm_version: '7.2.2'
+
+rsync::package_ensure:        'latest'
+rsync::server::use_xinetd:    false
+rsync::server::gid:           'nogroup'
+
+rsync::server::module:
+  hermes:
+    path: '/x1/from_hermes/'
+    hosts_allow: '140.211.11.30'
+    auth_users: 'apb-hermes'
+    secrets_file: '/etc/rsyncd.secrets'
+    incoming_chmod: false
+    outgoing_chmod: false
+    read_only: 'no'
+
+file:
+  '/etc/rsyncd.secrets':
+    content: "%{base::rsync_secrets}"
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+

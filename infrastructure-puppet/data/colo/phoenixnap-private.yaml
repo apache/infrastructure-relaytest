@@ -1,0 +1,17 @@
+---
+
+dnsclient::nameservers:
+  - '8.8.8.8'
+  - '8.8.4.4'
+
+base::hosts:
+  spamd1-us-west.apache.org:
+    ip: '10.40.0.7'
+  spamd2-us-west.apache.org:
+    ip: '10.40.0.9'
+  spamd3-us-west.apache.org:
+    ip: '10.40.0.10'
+  spamd4-us-west.apache.org:
+    ip: '10.40.0.11'
+
+ldapclient::ldapservers: 'ldaps://ldap-us-ro.apache.org:636 ldaps://ldap-eu-ro.apache.org:636'

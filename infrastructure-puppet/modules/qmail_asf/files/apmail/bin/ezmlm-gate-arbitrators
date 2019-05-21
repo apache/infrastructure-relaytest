@@ -1,0 +1,3 @@
+# list of arbitrator scripts, one per line: see the 
+# documentation on the -q flag in the ezmlm-gate manpage.
+/home/apmail/bin/ezmlm-gate-sender-apache

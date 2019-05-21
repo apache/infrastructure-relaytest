@@ -1,0 +1,58 @@
+---
+classes:
+  - postgresql::server
+  - postgresql_asf
+
+## Postgresql master in PNAP ##
+
+postgresql::server::listen_addresses: "localhost,%{::ipaddress_eth1}"
+postgresql::server::encoding: 'UTF-8'
+postgresql::server::locale: 'en_US.UTF-8'
+postgresql::server::datadir: '/x1/postgresql/9.3/main'
+
+postgresql::server::config_entry:
+  wal_level:
+    value: 'hot_standby'
+  max_wal_senders:
+    value: 3
+  checkpoint_segments:
+    value: 8
+  wal_keep_segments:
+    value: 8
+
+postgresql::server::pg_hba_rule:
+  replication:
+    description: 'enable replication'
+    type: 'hostssl'
+    database: 'replication'
+    user: 'rep'
+    address: '10.40.0.14/32'
+    auth_method: 'md5'
+  mailman:
+    description: 'Mailman 3'
+    type: 'hostssl'
+    database: 'mailman'
+    user: 'mailman'
+    address: '10.40.0.15/32'
+    auth_method: 'md5'
+  postoius:
+    description: 'Postorius'
+    type: 'hostssl'
+    database: 'postorius'
+    user: 'postorius'
+    address: '10.40.0.15/32'
+    auth_method: 'md5'
+  posthyp :
+    description: 'Postorius from hyperkitty'
+    type: 'hostssl'
+    database: 'postorius'
+    user: 'postorius'
+    address: '10.40.0.16/32'
+    auth_method: 'md5'
+  hyperkitty:
+    description: 'Hyperkitty'
+    type: 'hostssl'
+    database: 'hyperkitty'
+    user: 'hyperkitty'
+    address: '10.40.0.16/32'
+    auth_method: 'md5'

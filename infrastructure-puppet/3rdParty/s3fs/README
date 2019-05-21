@@ -1,0 +1,7 @@
+clambertus/puppet-s3fs
+
+Forked from chloeandisabel/puppet-s3fs
+
+Updated to not attempt to install fuse-utils on Ubuntu 14+, as it no longer exists.
+
+Updated to use GitHub for s3fs tarball, and build process for newer versions.

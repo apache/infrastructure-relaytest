@@ -1,0 +1,137 @@
+--[[
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+------------------------------------------------------------------------
+REQUEST TIME LIMITER FOR BZ/WIKI ETC:
+Works by capturing the time spent serving requests for a specific
+/16 block or, in the case of IPv6, /64 block, and if crossing a
+certain threshold, blocks with a 429 (Request Limit Exceeded)
+for the remainder of that duration.
+
+When INTERVAL is set to 120 and CPU_MAX to 90, it will allow a net block
+a max of 0.67 load (2/3 core) for this duration, and block if more is
+spent serving up stuff. Rate limits expire once the interval has passed,
+so slow scraping may be allowed, while hammering the service will cause
+continuous blocking, while still maintaining a 0.5 load max, per block.
+
+Note that this is bound to the respective servers (processes) in httpd,
+so the ServerLimit should not be set high, 1 or 2 preferably.
+------------------------------------------------------------------------
+]]--
+local INTERVAL = tonumber('<%= @interval %>') or 120 -- Check against the last N seconds of activity
+local CPU_MAX =  tonumber('<%= @cpumax %>') or 60    -- Max CPU time allowed, in seconds, in the interval per CIDR block
+                     -- Note that this is cpu per core, so if INTERVAL is 120, and 8 cores,
+                     -- full utilization of the box would be 960
+local WHITELIST = "<%= @whitelist %>"
+local WHITEIPS = "<%= @whiteips %>"
+
+-- quick'n'dirty way of getting the base block,
+-- either /16 for IPv4 or /64 for IPv6
+function get_block(ip)
+    local chunks = {}
+    local cidr = ''
+    local n = 0
+    if ip:match(':') then -- IPv6, split into /64s (grab four first blocks)
+        for chunk in ip:gmatch("([a-f0-9]+)") do
+            n = n + 1
+            if n > 4 then
+                break
+            end
+            table.insert(chunks, chunk)
+        end
+        cidr = table.concat(chunks, ':') .. '::/64'
+    elseif ip:match('%.') then -- IPv4, split into /16s (grab two first blocks)
+        for chunk in ip:gmatch("([0-9]+)") do
+            n = n + 1
+            if n > 2 then
+                break
+            end
+            table.insert(chunks, chunk)
+        end
+        cidr = table.concat(chunks, '.') .. '.0.0/16'
+    end
+    return cidr
+end
+
+-- extrapolate log ID based on time and CIDR and timestamp
+-- so that each $INTERVAL second interval has its own log ID per CIDR block.
+function get_log_id(r, cidr)
+    local stamp = math.floor(r:clock() / 1000000)
+    stamp = stamp - (stamp % INTERVAL) -- round to nearest INTERVAL seconds
+    local logid = cidr .. "-" .. stamp -- for instance, "1.2.0.0/16-123456789"
+    return logid
+end
+
+-- log timestamp before request is handled
+-- if cidr+time (logid) has spent too much, bail
+function before(r)
+    local cidr = get_block(r.useragent_ip)
+    local logid = get_log_id(r, cidr)
+    
+    -- if IP is whitelisted, ignore counting
+    for xip in WHITEIPS:gmatch("%S+") do
+        if r.useragent_ip == xip or cidr == xip then
+            _G.rtime = nil
+            return apache2.DECLINED
+        end
+    end
+    
+    -- If the URI is whitelisted, ignore counting
+    for uri in WHITELIST:gmatch("%S+") do
+        if r.unparsed_uri:match(uri) then
+            _G.rtime = nil
+            return apache2.DECLINED
+        end
+    end
+    
+    local cputime = r:ivm_get(logid)
+    if cputime and cputime > (CPU_MAX * 1000000) then -- if abusive, BAIL
+        if not r:ivm_get(logid .. "-error") then -- log once, only once
+            r:ivm_set(logid .. "-error", 1)
+            r:err(("Rate-limiting %s (%s) for %u seconds."):format(cidr, r.useragent_ip, INTERVAL))
+        end
+        r.status = 429
+        r:puts(("Your request has been rate limited, as we have detected excessive usage from your IP or net block:\n%.3f SECONDS OF TIME SPENT OVER %u SECONDS, MAX ALLOWED IS %u.\nRate-limits are automatic and reset every two minutes.\nIf you feel this is in error, please contact the Apache Infrastructure Team at: users@infra.apache.org."):format(cputime/1000000, INTERVAL, CPU_MAX, cidr))
+        _G.rtime = nil
+        return apache2.DONE
+    else
+        _G.rtime = r:clock() -- set current timestamp here, fetch in logging phase to calc CPU time
+        return apache2.DECLINED
+    end
+end
+
+-- log duration of request upon completion, if possible
+-- if we have a start time, work out how long it took to serve
+-- the request and add to the logid chunk
+function after(r)
+    local cidr = get_block(r.useragent_ip)
+    if rtime then -- if we have something to work with:
+        local duration = r:clock() - rtime -- duration of request in microseconds
+        local logid = get_log_id(r, cidr)
+        local val = r:ivm_get(logid)
+        if not val then
+            val = duration
+        else
+            val = val + duration
+        end
+        r:ivm_set(logid, val)
+        --r:err(("CIDR block has used %ums so far in %s"):format(val/1000, logid))
+    end
+    _G.rtime = nil
+    return apache2.OK
+end
+

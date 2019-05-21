@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# various constants
+SVNADMINS="gmcdonald,humbedooh,cml,christ,johna,dfoulks"
+
+PBASE="ou=project,ou=groups,dc=apache,dc=org"
+LDAPSEARCH="ldapsearch"
+
+XARGS="xargs"
+SED="sed"
+TR="tr"
+
+projects=`$LDAPSEARCH -x -LLL -b $PBASE 'cn=*' cn | $SED -ne 's/^cn: //p' | $SED -e '/^incubator$/d' | $SED -e '/^tac$/d' | sort`
+
+committers_may_release=":couchdb: , :lucene: , :commons: , :abdera: , :bookkeeper: , :camel: , :zookeeper: , :trafficcontrol:"
+
+# preamble
+cat <<EOF
+#
+# THIS IS A GENERATED FILE --- DO NOT EDIT
+#
+
+# Generated on: `date`
+
+[/]
+@svnadmins = rw
+* = r
+
+[/release/META]
+henkp = rw
+
+[/release/zzz]
+henkp = rw
+
+[groups]
+svnadmins=$SVNADMINS
+EOF
+
+
+# fill in new style [groups] 
+for pmc in $projects incubator; do
+  mem=$($LDAPSEARCH -x -LLL -b "cn=$pmc,$PBASE" 'cn=*' member | $SED -ne 's/^member: //p' | cut -d, -f1 | cut -d= -f2 | sort | $XARGS | $SED -e 's/ /,/g')
+  echo "$pmc=$mem"
+  own=$($LDAPSEARCH -x -LLL -b "cn=$pmc,$PBASE" 'cn=*' owner | $SED -ne 's/^owner: //p' | cut -d, -f1 | cut -d= -f2 | sort | $XARGS | $SED -e 's/ /,/g')
+  echo "${pmc}-pmc=$own"
+done
+
+echo
+
+# fill in per-PMC sections
+all_projects=`echo "$projects" | $TR ' ' '\n' | sort | uniq | $XARGS`
+for pmc in $all_projects; do
+  echo
+  echo "# $pmc"
+  for path in "/dev/$pmc" "/release/$pmc"; do
+    echo
+    echo "[$path]"
+    echo "@svnadmins = rw"
+    echo "@$pmc-pmc = rw"
+    if echo "$path" | grep "/dev/" > /dev/null; then
+      echo "@$pmc = rw"
+    fi
+    if echo "$committers_may_release" | grep ":$pmc:" > /dev/null; then
+      echo "@$pmc = rw"
+    fi
+    if [ x"$pmc" = x"esme" ]; then
+      echo "@attic-pmc = rw"
+    fi
+  done
+  echo
+done
+
+# postamble
+echo
+echo "# incubator"
+echo
+printf "[/dev/incubator]\n@svnadmins = rw \n@incubator-pmc = rw\n@incubator = rw\n"
+printf "[/release/incubator]\n@svnadmins = rw \n@incubator-pmc = rw\n@incubator = rw\n"
+echo

@@ -1,0 +1,139 @@
+---
+classes:
+  - apache
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::proxy_wstunnel
+  - apache::mod::rewrite
+  - apache::mod::status
+  - cwiki_asf
+  - blocky
+  - loggy
+  - datadog_agent::integrations::apache
+  - httpd_rate_limiter
+  - oraclejava::install
+  - rsync_asf
+  - ssl::name::cwiki_apache_org
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::vhosts
+  - zmanda_asf::client
+
+base::basepackages:
+ - 'lua5.2'
+ - 'liblua5.2-dev'
+ - 'mod-lua-asf'
+
+rsync_asf::cron_hour: 16
+rsync_asf::cron_minute: 02
+
+rsync_asf::fslist:
+  - /x1/cwiki/confluence-data
+
+httpd_rate_limiter::interval:  180
+httpd_rate_limiter::cpumax:    90
+httpd_rate_limiter::autoconf:  true
+httpd_rate_limiter::asfilter:  true
+httpd_rate_limiter::whitelist: "^/confluence/synchrony%-proxy/ ^/synchrony/"
+
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::timeout: 600
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '1000'
+apache::mod::event::maxsparethreads: '500'
+apache::mod::event::minsparethreads: '250'
+apache::mod::event::serverlimit: '5'
+apache::mod::event::startservers: '2'
+apache::mod::event::threadlimit: '1250'
+apache::mod::event::threadsperchild: '250'
+
+# cwiki_asf class variables.
+cwiki_asf::confluence_version: '6.9.0'
+cwiki_asf::conf_build_number: '7701'
+cwiki_asf::mysql_connector_version: '5.1.46'
+cwiki_asf::parent_dir: '/x1/cwiki'
+cwiki_asf::server_port: '8008'
+cwiki_asf::connector_port: '8888'
+cwiki_asf::context_path: '/confluence'
+cwiki_asf::synchrony_path: '/synchrony'
+cwiki_asf::synchrony_port: '8091'
+cwiki_asf::docroot: '/var/www'
+cwiki_asf::server_alias: 'cwiki.apache.org'
+cwiki_asf::heap_min_size: '4096'
+cwiki_asf::heap_max_size: '4096'
+cwiki_asf::maxmetaspacesize: '512'
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+datadog_agent::integrations::apache::url: 'http://localhost/server-status?auto'
+
+postfix::server::relayhost: '[mail-relay.apache.org]:587'
+postfix::server::smtp_use_tls: true
+
+vhosts_asf::vhosts::vhosts:
+  cwiki-vm4-80:
+    vhost_name: '*'
+    priority: '12'
+    servername: 'cwiki-vm4.apache.org'
+    serveraliases:
+      - 'cwiki.apache.org'
+    port: 80
+    ssl: false
+    docroot: '/var/www'
+    error_log_file: 'cwiki_error.log'
+    custom_fragment: |
+      <Location "/server-status">
+        SetHandler server-status
+        Require local
+      </Location>
+      RedirectMatch permanent ^((?!\/(server-status)).*)$ https://cwiki.apache.org/$1
+
+  cwiki-vm4-443:
+      vhost_name: '*'
+      default_vhost: true
+      servername: 'cwiki-vm4.apache.org'
+      serveraliases:
+        - 'cwiki.apache.org'
+      port: 443
+      docroot: '/var/www'
+      error_log_file: 'cwiki_error.log'
+      ssl: true
+      ssl_cert: '/etc/ssl/certs/wildcard.apache.org.crt'
+      ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+      ssl_key: '/etc/ssl/private/wildcard.apache.org.key'
+      custom_fragment: |
+        RewriteEngine On
+        # INFRA-14849
+        RewriteMap solr_id_to_new "txt:/etc/apache2/solr_id_to_new.map.txt"
+        RewriteMap solr_name_to_new "txt:/etc/apache2/solr_name_to_new.map.txt"
+        RewriteCond "${solr_name_to_new:$1}" !="" [NC]
+        RewriteRule "solr/(.*)" https://lucene.apache.org/solr/guide/6_6${solr_name_to_new:$1}? [R=301,NC,NE]
+        RewriteCond %%{}{QUERY_STRING} pageId=(\d+)
+        RewriteCond "${solr_id_to_new:%1}" !="" [NC]
+        RewriteRule ".*" https://lucene.apache.org/solr/guide/6_6${solr_id_to_new:%1}? [R=301,NC,NE]
+        RewriteRule "^solr(/?)" https://lucene.apache.org/solr/guide/ [R=301,NC,NE]
+        # cwiki
+        ProxyPass /intermediates !
+        ProxyPass /confluence//spaces/viewdefaultdecorator.action !
+        ProxyPass /confluence/ http://127.0.0.1:8888/confluence/ disablereuse=On timeout=500 retry=0 max=400
+        ProxyPass /server-status !
+        ProxyPassReverse /confluence/ http://127.0.0.1:8888/confluence/
+        RewriteCond $1 !(confluence|intermediates|server-status)
+        RewriteRule ^/(.*) https://cwiki.apache.org/confluence/display/$1 [R=301,L,END]
+        #synchrony
+        RewriteCond %%{}{HTTP:UPGRADE} ^WebSocket$ [NC]
+        RewriteCond %%{}{HTTP:CONNECTION} Upgrade$ [NC]
+        RewriteRule .* ws://127.0.0.1:8091%%{}{REQUEST_URI} [P]
+        # misc
+
+        RewriteCond %%{}{QUERY_STRING} file: [NC]
+        RewriteRule viewdefaultdecorator - [F,END]
+
+
+oraclejava::install::version: '8'
+oraclejava::install::unlimited_jce: true

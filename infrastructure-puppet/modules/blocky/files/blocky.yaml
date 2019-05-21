@@ -1,0 +1,10 @@
+client:
+    interval:     45
+
+server:
+    apiurl:        https://blocky.apache.org/blocky-public
+
+iptables:
+    chains:
+        - INPUT
+        - fail2ban-default

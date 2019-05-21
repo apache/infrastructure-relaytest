@@ -1,0 +1,5 @@
+# Known issues ...
+
+- Right now the module is very much a WIP
+- The module should be 100% platform agnostic, where possible. If not is it likely an oversight and specific to Ubuntu 14.04
+- There are external puppet module dependencies you will need to satisfy manually for now

@@ -1,0 +1,19 @@
+# This file is being maintained by Puppet.
+# DO NOT EDIT
+
+ENABLED=1
+OPTIONS="--create-prefs \
+	 --ipv4only \
+	 --min-spare=<%= @minspare %> \
+	 --min-children=<%= @minchildren %>  \
+	 --max-spare=<%= @maxspare %> \
+	 --max-conn-per-child=<%= @maxconnsperchild %> \
+	 --max-children=<%= @maxchildren %> \
+         --helper-home-dir=<%= @helperhomedir %> \
+         --listen-ip=<%= @listenip %> \
+         --allowed-ips=<%= @allowedips %> \
+         #--username=debian-spamd<% if @nouserconfig %> \
+         #--nouser-config<% end %><% if @allowtell %> \
+         #--allow-tell<% end %>"
+PIDFILE="/var/run/spamd.pid"
+CRON=1

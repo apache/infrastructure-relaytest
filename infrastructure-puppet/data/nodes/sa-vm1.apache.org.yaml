@@ -1,0 +1,5 @@
+---
+classes:
+  - spamassassin_pvm_asf
+
+ldapclient::ldapservers: 'ldaps://ldap-eu-ro.apache.org:636 ldaps://ldap-us-ro.apache.org:636'

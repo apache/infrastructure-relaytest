@@ -1,0 +1,59 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          mailman3-core
+# Required-Start:    $syslog $local_fs $remote_fs $named $network
+# Required-Stop:     $syslog $local_fs $remote_fs $named $network
+# Should-Start:
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Mailman3 Core
+# Description:       Starts and stops the Mailman queue runners, used to
+#                    manage the various message queues within the Mailman
+#                    mailing list manager.
+### END INIT INFO
+
+. /lib/lsb/init-functions
+
+NAME='Mailman 3'
+export PYTHONPATH=<%= @installroot %>/venv3/lib/python3.4/site-packages/
+DAEMON=<%= @installroot %>/venv3/bin/mailman
+RUN_AS=`id -u <%= @username %>`
+PIDFILE=/var/run/mailman/master.pid
+CMD="$DAEMON start"
+
+do_start() {
+  log_daemon_msg "Starting $NAME core" "mailman"
+  start-stop-daemon --start --background --user $RUN_AS --pidfile $PIDFILE --chuid $RUN_AS --startas $CMD
+  log_end_msg $?
+}
+
+do_stop() {
+  log_daemon_msg "Stopping $NAME core" "mailman"
+  start-stop-daemon --stop --user $RUN_AS --pidfile $PIDFILE
+  log_end_msg $?
+}
+
+do_restart() {
+  log_daemon_msg "Restarting $NAME core" "mailman"
+  $DAEMON restart
+  log_end_msg $?
+}
+
+case "$1" in
+ start)
+   do_start
+   ;;
+ stop)
+   do_stop
+   ;;
+ restart)
+   do_restart
+   ;;
+ *)
+   echo "Usage: $0 {start|stop|restart}"
+   exit 1
+   ;;
+esac
+

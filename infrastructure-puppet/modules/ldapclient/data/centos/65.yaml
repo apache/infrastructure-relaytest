@@ -1,0 +1,11 @@
+---
+
+ldapclient::ldapclient_packages:
+  - 'openldap'
+  - 'openldap-clients'
+  - 'nss-pam-ldapd'
+
+ldapclient::install::centos::65::tlscertpath: '/etc/openldap/cacert.pem'
+ldapclient::install::centos::65::pamhostcheck: 'yes'
+ldapclient::install::centos::65:::bashpath: '/bin/bash'
+

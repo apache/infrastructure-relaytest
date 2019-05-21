@@ -1,0 +1,40 @@
+{
+  "posturl": "cgi-bin/migratemoin.cgi",
+  "preload": [
+  ],
+   "pages": [{
+          "title": "Base data",
+          "fields": {
+              "moinwiki": {
+                  "desc": "Moin wiki name to migrate from",
+                  "placeholder": "agila,apachecon,commons etc - [-a-z0-9] only",
+                  "type": "text",
+                  "filter": "^[-a-z0-9]+$",
+                  "mandatory": true
+              },
+              "space": {
+                  "desc": "Confluence space to migrate to",
+                  "placeholder": "Space key of an existing Confluence space to migrate to",
+                  "type": "text",
+                  "filter": "^[A-Z0-9]+$",
+                  "verifier": "spaceExists",
+                  "preload": "js/spacekeys.json",
+                  "mandatory": true
+              },
+              "history": {
+                  "desc": "Import all revisions for all pages",
+                  "type": "checkbox"
+             }
+          }
+      }, {
+         "title": "options",
+         "fields": {
+           "homepage": {
+             "desc": "Rename FrontPage to Home",
+             "type": "checkbox"
+    }
+  },
+  "footer": "<div style='float: left; width: 100%; margin-top: 20px; background: #FFD; border: 1px dotted #666;'><p>If ticked, the moin FrontPage will be renamed to the default confluence Home page.</p></div>"
+}
+  ]
+}

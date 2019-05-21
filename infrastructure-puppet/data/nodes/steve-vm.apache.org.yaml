@@ -1,0 +1,139 @@
+---
+classes:
+  - apache
+  - apache::mod::authnz_ldap
+  - apache::mod::ssl
+  - elasticsearch
+  - loggy
+  - ssl::name::wildcard_apache_org
+  - svnwcsub
+  - vhosts_asf::vhosts
+  - vhosts_asf::modules
+  
+svnwcsub::gid:              '9995'
+svnwcsub::uid:              '9995'
+svnwcsub::conf_file:        'svnwcsub.conf'
+svnwcsub::service_ensure:   'running'
+svnwcsub:::conf_path:       '/etc/'
+svnwcsub::groupname:        'svnwc'
+svnwcsub::groups:
+  - 'svnwc'
+svnwcsub::service_name:     'svnwcsub'
+svnwcsub::shell:            '/bin/bash'
+svnwcsub::source:           'svnwcsub.conf.steve'
+svnwcsub::username:         'svnwc'
+
+elasticsearch::ensure: 'present'
+elasticsearch::status: 'enabled'
+elasticsearch::java_install: true
+elasticsearch::init_defaults:
+  ES_HEAP_SIZE: '2g'
+  
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::max_keepalive_requests: 1000
+apache::timeout: 600
+apache::default_vhost:      false
+apache::docroot:            '/var/www/htdocs'
+
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '250'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '500'
+apache::mod::event::maxsparethreads: '150'
+apache::mod::event::minsparethreads: '150'
+apache::mod::event::serverlimit: '10'
+apache::mod::event::startservers: '5'
+apache::mod::event::threadlimit: '250'
+apache::mod::event::threadsperchild: '50'
+
+apache::mod::status::allow_from:
+  - all
+
+apache::mpm_module:         'event'
+apache::serveradmin:        'users@infra.apache.org'
+
+base::basepackages:
+  - 'lua5.2'
+  - 'liblua5.2-dev'
+  - 'lua5.2-cjson'
+  - 'lua5.2-socket'
+  - 'lua5.2-sec'
+  - 'mod-lua-asf'
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+postfix::server::relayhost: 'mailrelay1-us-west.apache.org'
+
+vhosts_asf::modules::modules:
+  cgi:
+    name: 'cgi'
+  lua:
+    name: 'lua'
+
+vhosts_asf::vhosts::vhosts:
+  steve_http:
+    vhost_name: '*'
+    port: 80
+    docroot: '/var/www/steve'
+    servername: 'vote.apache.org'
+    directoryindex: 'index.html'
+    custom_fragment: |
+      Redirect permanent / https://vote.apache.org/
+      
+  steve_https:
+    vhost_name: '*'
+    port: 443
+    ssl: true
+    docroot: '/var/www/steve/www/htdocs'
+    servername: 'vote.apache.org'
+    directoryindex: 'index.html'
+    ssl_cert: '/etc/ssl/certs/wildcard.apache.org.crt'
+    ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+    ssl_key: '/etc/ssl/private/wildcard.apache.org.key'
+    options:
+      - Indexes
+      - FollowSymLinks
+      - MultiViews
+      - ExecCGI
+    custom_fragment: |
+      # REST API
+      ScriptAlias /steve/admin /var/www/steve/www/cgi-bin/rest_admin.py
+      ScriptAlias /steve/voter /var/www/steve/www/cgi-bin/rest_voter.py
+      
+      # Deflate JS
+      AddOutputFilterByType DEFLATE application/json
+      AddOutputFilterByType DEFLATE application/javascript
+      
+      # Lua for quorum app
+      LuaScope thread
+      LuaCodeCache stat
+      AddHandler lua-script .lua
+      
+      # Committer Auth for now, member auth commented out
+      <Location />
+        AuthType Basic
+        AuthBasicProvider ldap
+        AuthName "ASF Committers Only"
+        AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPGroupAttribute memberUid
+        AuthLDAPGroupAttributeIsDN off
+        Require ldap-group cn=member,ou=groups,dc=apache,dc=org
+        AuthLDAPRemoteUserAttribute uid
+        require valid-user
+      </Location>
+      
+      # Admin Auth
+      <Location /steve/admin>
+          AuthType Basic
+          AuthName "STeVe administration"
+          AuthLDAPurl "ldaps://ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPRemoteUserAttribute uid
+          AuthBasicProvider ldap
+          require valid-user
+      </Location>
+      
+

@@ -1,0 +1,124 @@
+---
+classes:
+  - apache
+  - apache::mod::rewrite
+  - apache::mod::ssl
+  - apache::mod::status
+  - blocky
+  - datadog_agent::integrations::apache
+  - httpd_rate_limiter
+  - kif
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::vhosts
+  - vhosts_asf::modules
+  - rsync_asf
+  - rsync::server
+
+rsync_asf::cron_hour: 23
+rsync_asf::cron_minute: 45
+
+rsync_asf::fslist:
+  - /www
+
+rsync::package_ensure:        'latest'
+rsync::server::use_xinetd:    false
+rsync::server::gid:           'nogroup'
+
+rsync::server::module:
+  moin:
+    path: '/www/wiki.apache.org/data/'
+    hosts_allow: '37.48.69.235'
+    auth_users: 'apb-moin'
+    secrets_file: '/etc/rsyncd.secrets'
+    incoming_chmod: false
+    outgoing_chmod: false
+    read_only: 'yes'
+
+file:
+  '/etc/rsyncd.secrets':
+    content: "%{base::rsync_secrets}"
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+  
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::max_keepalive_requests: 1000
+apache::timeout: 600
+apache::default_vhost:      false
+apache::docroot:            '/www/wiki'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '800'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '800'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '50'
+apache::mod::event::serverlimit: '3'
+apache::mod::event::startservers: '2'
+apache::mod::event::threadlimit: '800'
+apache::mod::event::threadsperchild: '250'
+
+apache::mpm_module:         'event'
+apache::serveradmin:        'users@infra.apache.org'
+
+base::basepackages:
+  - 'libapache2-mod-wsgi'
+
+datadog_agent::integrations::apache::url: 'https://wiki.apache.org/server-status?auto'
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+postfix::server::relayhost: 'mailrelay1-us-west.apache.org'
+
+vhosts_asf::modules::modules:
+  wsgi:
+    name: 'wsgi'
+
+httpd_rate_limiter::interval: 120
+httpd_rate_limiter::cpumax:   60
+httpd_rate_limiter::autoconf: true
+
+
+vhosts_asf::vhosts::vhosts:
+  moin_http:
+    vhost_name: '*'
+    port: 80
+    docroot: '/www/wiki/share/moin/htdocs'
+    servername: 'wiki.apache.org'
+    directoryindex: 'index.html'
+    custom_fragment: |
+      # Redir to https (fix name later)
+      Redirect / https://wiki.apache.org/
+      
+  wiki_https:
+    vhost_name: '*'
+    port: 443
+    ssl: true
+    docroot: '/www/wiki/share/moin/htdocs'
+    servername: 'wiki.apache.org'
+    directoryindex: 'index.html'
+    ssl_cert:                    '/etc/ssl/certs/wildcard.apache.org.crt'
+    ssl_chain:                   '/etc/ssl/certs/wildcard.apache.org.chain'
+    ssl_key:                     '/etc/ssl/private/wildcard.apache.org.key'
+    options:
+      - Indexes
+      - FollowSymLinks
+    custom_fragment: |
+      # WSGI
+      WSGIDaemonProcess wiki processes=20 threads=1 maximum-requests=500 group=www-data display-name=moinwiki
+      WSGIProcessGroup wiki
+      WSGIScriptAliasMatch /([^/]+) /www/wiki/share/moin/server/moin.wsgi
+      WSGIApplicationGroup %%{}{GLOBAL}
+      
+      #Rewrites
+      RewriteEngine On
+      RewriteRule /moin_static(\d+)/(.*)$ /www/wiki/share/moin/htdocs/$2 [L]
+      RewriteRule ^/wiki(.*)$ /www/wiki/share/moin/htdocs$1 [L]
+      RedirectMatch ^/$ /general/
+
+      <Location "/server-status">
+        SetHandler server-status
+        Require local
+      </Location>

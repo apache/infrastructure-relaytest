@@ -1,0 +1,7 @@
+---
+:hierarchy:
+    - "%{asfosname}/%{asfosrelease}"
+    - "common"
+
+:yaml:
+    :datadir: .

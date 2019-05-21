@@ -1,0 +1,8 @@
+[user]
+        name = buildbot
+        email = users@infra.apache.org
+[push]
+        default = nothing
+
+[credential]
+        helper = store

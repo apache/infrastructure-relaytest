@@ -1,0 +1,75 @@
+---
+classes:
+  - datadog_agent::integrations::postgres
+  - postgresql::server
+  - postgresql_asf
+  - postgresql_asf::backup
+  - rsync_asf
+
+rsync_asf::cron_hour: 20
+rsync_asf::cron_minute: 07
+
+rsync_asf::fslist:
+  - /x1/db_dump/postgres
+
+datadog_agent::integrations::postgres::host: 'localhost'
+datadog_agent::integrations::postgres::user: 'datadog'
+
+## Postgresql master in LeaseWeb US ##
+#
+postgresql_asf::backup::age: '2d'
+
+postgresql::server::listen_addresses: "*"
+postgresql::server::encoding: 'UTF-8'
+postgresql::server::locale: 'en_US.UTF-8'
+postgresql::server::datadir: '/x1/postgresql/9.3/main'
+postgresql::server::needs_initdb: true
+
+postgresql::server::config_entry:
+  wal_level:
+    value: 'hot_standby'
+  max_wal_senders:
+    value: 3
+  checkpoint_segments:
+    value: 8
+  wal_keep_segments:
+    value: 8
+  max_connections:
+    value: 1024
+
+postgresql::server::pg_hba_rule:
+  replication:
+    description: 'enable replication'
+    type: 'hostssl'
+    database: 'replication'
+    user: 'rep'
+    address: '37.48.69.242/32'
+    auth_method: 'md5'
+  jira_main:
+    description: 'jira prod'
+    type: 'host'
+    database: 'jira_main'
+    user: 'jira'
+    address: '10.10.3.5/32'
+    auth_method: 'md5'
+  datadog:
+    description: 'datadog monitor'
+    type: 'host'
+    database: 'postgres'
+    user: 'datadog'
+    address: '127.0.0.1/32'
+    auth_method: 'md5'
+  puppetdb:
+    description: 'devops puppetdb'
+    type: 'host'
+    database: 'puppetdb'
+    user: 'puppetdb'
+    address: '140.211.11.135/32'
+    auth_method: 'md5'
+  puppet6db:
+    description: 'pm01 p6 puppetdb'
+    type: 'host'
+    database: 'puppet6db'
+    user: 'puppet6db'
+    address: '10.10.3.230/32'
+    auth_method: 'md5'

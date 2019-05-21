@@ -1,0 +1,6 @@
+[receive]
+        fsckObjects = true
+#        denyDeletes = true
+#        denyNonFastForwards = true
+[core]
+        longpaths = true

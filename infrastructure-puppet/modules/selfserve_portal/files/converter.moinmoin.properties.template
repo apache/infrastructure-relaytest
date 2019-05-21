@@ -1,0 +1,296 @@
+# Hierarchy to preserve subpages 
+# If your subpages all have unique names, you can let the hierarchy rename the pages to just the node name. 
+# To turn that option on, assign the content-hierarchy-setname property to true. 
+# If you do that, you will also need to comment converter 420 and uncomment converters 421 and 422 (relative link converters)
+
+MoinMoin.0010.switch.hierarchy-builder=UseBuilder
+MoinMoin.0010.classname.hierarchy-builder=com.atlassian.uwc.hierarchies.ContentHierarchy
+MoinMoin.0010.content-hierarchy-pattern.property=\{orig-title:([^}]*)\}
+MoinMoin.0010.content-hierarchy-pattern-includes-current.property=true
+MoinMoin.0010.content-hierarchy-delim.property=/
+MoinMoin.0010.content-hierarchy-default-root.property=
+MoinMoin.0010.content-hierarchy-setname.property=false
+MoinMoin.0010.remove-content.java-regex=\{orig-title:([^}]*)\}\n{replace-with}
+
+MoinMoin.0001.users-must-exist.property=false
+MoinMoin.0001.engine-saves-to-disk.property=true
+
+## Page Histories - if you exported with history option turned on,
+## uncomment and configure these options. See 
+## http://confluence.atlassian.com/display/CONFEXT/UWC+Page+History+Framework
+
+###=placeholder=###
+#MoinMoin.0002.switch.page-history-preservation=true
+#MoinMoin.0003.suffix.page-history-preservation=-#.txt
+
+# First, get info lines out of the text (title, author, date, revision comment, ...)
+MoinMoin.0015.info-converter.class=com.atlassian.uwc.converters.moinmoin.MoinInfoConverter
+
+# Extract {code} and {noformat} blocks with java-regex-tokenizer, so they get excluded from further replacements
+MoinMoin.0020-re_cplusplus.java-regex-tokenizer=(?s)\{{3}[\r\n ]?#!cplusplus([\r\n ]+)(.+?)\}{3}{replace-with}{code:language=c++}$1$2{code}
+MoinMoin.0021-re_java.java-regex-tokenizer=(?s)\{{3}[\r\n ]?#!java([\r\n ]+)(.+?)\}{3}{replace-with}{code:language=java}$1$2{code}
+MoinMoin.0022-re_python.java-regex-tokenizer=(?s)\{{3}[\r\n ]?#!python([\r\n ]+)(.+?)\}{3}{replace-with}{code:language=python}$1$2{code}
+MoinMoin.0023-re_noformat.java-regex-tokenizer=(?s)\{{3}(?![\r\n ]?#!wiki )([\r\n ]+)(.+?)\}{3}{replace-with}{noformat}$1$2{noformat}
+
+# Escape * when it's not the first non-whitespace character of a line
+# (because it needs to be literal *, and not risk being interpreted as bold)
+MoinMoin.0025-escape_star.java-regex=\*{replace-with}\\*
+MoinMoin.0026-unescape_leadingstar.java-regex=(?m)^(\s*)\\\*{replace-with}$1*
+
+# Smileys with curly braces, replace those first, so we can escape curly braces afterwards
+# Note: (?!([^\{]|\{(?!\{\{))*\}{3}) is a negative lookahead pattern to avoid matching inside {{{}}} blocks -- not needed right now
+MoinMoin.0030-smileys.java-regex=(\s)\{\*\}(\s){replace-with}$1(on)$2
+MoinMoin.0031-smileys.java-regex=(\s)\{1\}(\s){replace-with}$1 *1* $2
+MoinMoin.0032-smileys.java-regex=(\s)\{2\}(\s){replace-with}$1 *2*$2
+MoinMoin.0033-smileys.java-regex=(\s)\{3\}(\s){replace-with}$1 *3*$2
+MoinMoin.0034-smileys.java-regex=(\s)\{OK\}(\s){replace-with}$1(y)$2
+MoinMoin.0035-smileys.java-regex=(\s)\{X\}(\s){replace-with}$1(x)$2
+MoinMoin.0036-smileys.java-regex=(\s)\{i\}(\s){replace-with}$1(i)$2
+MoinMoin.0037-smileys.java-regex=(\s)\{o\}(\s){replace-with}$1(off)$2
+
+# Escape single curly braces, otherwise the output cannot be converted from
+# wiki syntax to xhtml (curly braces indicate macro's in confluence)
+# This has to be done early, to avoid messing up macro's.
+MoinMoin.0040-openingcurlybrace.java-regex=(?m)(^|[^\{])(\{)($|[^\{]){replace-with}$1\\$2$3
+MoinMoin.0041-closingcurlybrace.java-regex=(?m)(^|[^\}])(\})($|[^\}]){replace-with}$1\\$2$3
+
+# Escape single [], otherwise they will be interpreted as links
+MoinMoin.0045-escape_single_opensquare.java-regex=(^|[^\[])\[($|[^\[]){replace-with}$1\\[$2
+MoinMoin.0046-escape_single_closesquare.java-regex=(^|[^\]])\]($|[^\]]){replace-with}$1\\]$2
+
+# Comments and processing instructions on the first line are removed (except #redirect)
+MoinMoin.0050-redirect_processing.java-regex=(?i)#redirect (.*){replace-with}{redirect:$1}
+MoinMoin.0051-comments_and_processing.java-regex=(?m)^##[^#].*${replace-with}
+
+#Remove some unnecessary stuff not captured above
+MoinMoin.0052-comments_and_processing.java-regex=##master-page(.*){replace-with}
+MoinMoin.0053-comments_and_processing.java-regex=#format(.*){replace-with}
+MoinMoin.0054-comments_and_processing.java-regex=#language(.*){replace-with}
+MoinMoin.0055-comments_and_processing.java-regex=#pragma(.*){replace-with}
+MoinMoin.0056-comments_and_processing.java-regex=## page(.*){replace-with}
+
+# Attachments and user links (wikinames to users become [~username])
+MoinMoin.0060-attachments.class=com.atlassian.uwc.converters.moinmoin.MoinMoinAttachmentConverter
+## MoinMoin.0061.userlink-converter.class=com.atlassian.uwc.converters.moinmoin.MoinUserLinkConverter
+
+# Remaining {{{ multiline }}} blocks can be admonitions or comment blocks
+# For admonitions, I believe the best matching mapping is:
+#   warning   -> warning
+#   important -> warning
+#   caution   -> note
+#   note      -> info
+#   tip       -> tip
+#   comment   -> info (without icon)
+MoinMoin.0070-re_warning.java-regex=(?s)\{{3}[\r\n ]?#!wiki warning([\r\n ]+)(.+?)\}{3}{replace-with}{warning}$1$2{warning}
+MoinMoin.0071-re_important.java-regex=(?s)\{{3}[\r\n ]?#!wiki important([\r\n ]+)(.+?)\}{3}{replace-with}{warning}$1$2{warning}
+MoinMoin.0072-re_caution.java-regex=(?s)\{{3}[\r\n ]?#!wiki caution([\r\n ]+)(.+?)\}{3}{replace-with}{note}$1$2{note}
+MoinMoin.0073-re_note.java-regex=(?s)\{{3}[\r\n ]?#!wiki note([\r\n ]+)(.+?)\}{3}{replace-with}{info}$1$2{info}
+MoinMoin.0074-re_tip.java-regex=(?s)\{{3}[\r\n ]?#!wiki tip([\r\n ]+)(.+?)\}{3}{replace-with}{tip}$1$2{tip}
+MoinMoin.0075-re_comment.java-regex=(?s)\{{3}[\r\n ]?#!wiki comment([\r\n ]+)(.+?)\}{3}{replace-with}{info:icon=false}$1$2{info}
+
+# Remove Anchor macro
+MoinMoin.0095-remove_anchor_macro.java-regex=\[\[Anchor\(.+\)\]\]{replace-with}
+# Translate Anchors to confluence anchors
+MoinMoin.0096-replace_anchor_macro.java-regex=<<Anchor\((.+?)\)>>{replace-with}{anchor:$1}
+
+# Footnotes
+MoinMoin.0097-replace_footnote_macro.java-regex=<<FootNote\((.+?)\)>>{replace-with}{footnote}$1{footnote}
+# Inject {display-footnotes} at the end, if there is at least one footnote
+MoinMoin.0098-insert_displayfootnotes.java-regex=(?s)(.*)(\{footnote\})(.*)${replace-with}$1$2$3NEWLINE{display-footnotes}
+
+# TableOfContents macro
+#MoinMoin.0100-table_of_contents.java-regex=\[{2}TableOfContents\]{2}{replace-with}{toc:type=flat|maxLevel=5|printable=false}
+#MoinMoin.0100-table_of_contents.java-regex=\[{2}TableOfContents\]{2}{replace-with}{toc}
+MoinMoin.0100-table_of_contents.java-regex=<{2}TableOfContents(\(.*\)){0,1}>{2}{replace-with}{toc}
+
+# Escape -- right after '' (italics); we have one case where the -- is intended literally, not as strikethrough
+MoinMoin.0102-escape_strikethrough_after_italics.java-regex=''--{replace-with}''\\-\\-
+# Escape single - after < or before >, otherwise this might be interpreted as strikethrough
+MoinMoin.0103-escape_singledash1.java-regex=<-{replace-with}<\\-
+MoinMoin.0104-escape_singledash2.java-regex=([^\\])->{replace-with}$1\\->
+
+# Formatting
+# kills some multiline stuff
+#MoinMoin.0106-re_underlined.java-regex=_{2}([^_]*.*)_{2}([^_]*){replace-with}+$1+ 
+MoinMoin.0107-re_underlined.java-regex=_{2}(.+?)_{2}{replace-with}+$1+
+MoinMoin.0108-re_subscript.java-regex=,{2}(.+?),{2}{replace-with}{~}$1~
+MoinMoin.0109-re_strikethrough.java-regex=-{2}\((.+?)\)-{2}{replace-with}-$1-
+MoinMoin.0110-re_smallerfont.java-regex=~-(.+?)-~{replace-with}$1
+MoinMoin.0111-re_largerfont.java-regex=~\+(.+?)\+~{replace-with}$1
+
+# When superscript is attached to preceding text, put the first ^ inside {}
+MoinMoin.0115-superscript_detach.java-regex=(?m)(\w)\^(\w+)\^(\W){replace-with}$1{^}$2^$3
+
+# Definitions (name:: definition): simulate using bold and indentation
+MoinMoin.0120-definition.java-regex=(?m)^(\s*)(.+?):: (.*)${replace-with}$1*$2*NEWLINE$1{indent}NEWLINE$1$3NEWLINE$1{indent}
+
+# Syntax highlighting
+# Uncomment the first two converters if your Confluence site is running the new code macro
+# <http://confluence.atlassian.com/display/CONFEXT/New+Code+Macro>
+# If you get errors like "Unable to find source-code formatter for language: cplusplus" in
+# Confluence, then either the new code macro is not installed or you need to add a formatter
+# for a particular language. See the link above for details.
+# MoinMoin.0200-new_code_macro_1.java-regex=\{{3}#!(\w*){replace-with}{code:$1|linenumbers=true}
+# MoinMoin.0201-new_code_macro_2.java-regex=\{{3}{replace-with}{code:none|linenumbers=true}
+
+# Monospaced
+MoinMoin.0200-monospaced.java-regex=\{{3} *([^\}\r\n]+?) *\}{3}{replace-with}{{$1}}
+
+## Monospace is converted late (it may confuse the codetext converter if the quoted text starts with a "{")-
+MoinMoin.0225-re_monospaced.java-regex=`(.+?)`{replace-with}{{$1}}
+
+# Inside Monospaced, escape ^ (superscript) and -- (doesn't work in Confluence)
+MoinMoin.0230-monospaced_escape_superscript.java-regex=(\{{2}[^\}\r\n]*?)(\^)([^\}\r\n]*?\}{2}){replace-with}$1\\$2$3
+MoinMoin.0231-monospaced_escape_dashdash.java-regex=(\{{2}[^\}\r\n]*?)--([^\}\r\n]*?\}{2}){replace-with}$1\\-\\-$2
+
+# Before list conversion, escape # if it's the first non-whitespace character
+MoinMoin.0234-escapehash.java-regex=(?m)^(\s*)#{replace-with}$1\\#
+
+# List converter
+MoinMoin.0235-list_bullet_indented.class=com.atlassian.uwc.converters.moinmoin.MoinListConverter
+
+# Rules (Confluence only supports one thickness)
+MoinMoin.0240-horizonal_rule.java-regex=-{4,}{replace-with}----
+
+# Eliminate unnecessary linebreaks
+MoinMoin.0242-joinlines.java-regex=(?s)([\w\.\?!,;'"\)\]]+ ?)\r?\n([\w\.\?!,;'"\(\[]+){replace-with}$1 $2
+
+# Lists
+#MoinMoin.0249-list_bullet_add_missing_space.java-regex= \*([^ ].*){replace-with} \* $1
+#MoinMoin.0250-list_bullet_indented.java-regex= {4,4}\*(.+)*{replace-with}****$1
+#MoinMoin.0251-list_bullet_indented.java-regex= {3,3}\*(.+)*{replace-with}***$1
+#MoinMoin.0252-list_bullet_indented.java-regex= {2,2}\*(.+)*{replace-with}**$1
+#MoinMoin.0260-list_numbered.java-regex=1\.\s(.*){replace-with}# $1
+
+#MoinMoin.0250-list_bullet_indented.class=com.atlassian.uwc.converters.moinmoin.MoinListConverter
+#MoinMoin.0249-list_bullet_add_missing_space.java-regex= \*([^ ].*){replace-with} \* $1
+#MoinMoin.0250-list_bullet_indented.java-regex= {4,4}\*(.+)*{replace-with}****$1
+#MoinMoin.0251-list_bullet_indented.java-regex= {3,3}\*(.+)*{replace-with}***$1
+#MoinMoin.0252-list_bullet_indented.java-regex= {2,2}\*(.+)*{replace-with}**$1
+#MoinMoin.0260-list_numbered.java-regex=1\.\s(.*){replace-with}# $1
+
+#MoinMoin.0300-re_h5.java-regex=={5} (.+) ={5}{replace-with}NEWLINEh5. $1
+#MoinMoin.0301-re_h4.java-regex=={4} (.+) ={4}{replace-with}NEWLINEh4. $1
+#MoinMoin.0302-re_h3.java-regex=={3} (.+) ={3}{replace-with}NEWLINEh3. $1
+#MoinMoin.0303-re_h2.java-regex=={2} (.+) ={2}{replace-with}NEWLINEh2. $1
+#MoinMoin.0304-re_h1.java-regex=^\s*={1} (.+) ={1}{replace-with}NEWLINEh1. $1
+
+MoinMoin.0300-re_h5.java-regex=(?m)^[ \t]*={5} (.+) ={5}{replace-with}h5. $1
+MoinMoin.0301-re_h4.java-regex=(?m)^[ \t]*={4} (.+) ={4}{replace-with}h4. $1
+MoinMoin.0302-re_h3.java-regex=(?m)^[ \t]*={3} (.+) ={3}{replace-with}h3. $1
+MoinMoin.0303-re_h2.java-regex=(?m)^[ \t]*={2} (.+) ={2}{replace-with}h2. $1
+MoinMoin.0304-re_h1.java-regex=(?m)^[ \t]*={1} (.+) ={1}{replace-with}h1. $1
+
+# Internal links
+MoinMoin.0400-moinlink_syntax_1.java-regex=\["(.+)"\]{replace-with}[$1]
+## Subpages will either be named the final node of a subpage, or the
+## entire list of nodes seperated by spaces. If you've set 
+## MoinMoin.0010.content-hierarchy-setname.property=true
+## then you should comment 420, and uncomment 421 and 422.
+MoinMoin.0420-relativelink-setnameisfalse.class=com.atlassian.uwc.converters.moinmoin.FullRelativeLinkConverter
+# 421 and 422 in a variation with leading part before / is still needed, for subpage links where the parent page is part of the link, before the /
+MoinMoin.0421-relativelink-subpage-alias.java-regex-tokenizer=\[\[(([A-Z][a-z0-9]+){2,})/([^\]\|]*)\|([^\]]*)\]\]{replace-with}[$4|$1 $3]
+MoinMoin.0422-relativelink-subpage.java-regex-tokenizer=\[\[(([A-Z][a-z0-9]+){2,})/([^\]]*)\]\]{replace-with}[$1 $3]
+## The parent relative link require's the Linking Plugin:
+## http://www.customware.net/repository/display/AtlassianPlugins/link-to
+MoinMoin.0425-relativelink-parent-alias.java-regex-tokenizer=\[\[\.\.\/\|([^\]]*)\]\]{replace-with}{link-to:@parent}$1{link-to}
+MoinMoin.0426-relativelink-parent.java-regex-tokenizer=\[\[\.\.\/\]\]{replace-with}{link-to:@parent}../{link-to}
+
+# Inside links, escape < and > with %3C and %3E, otherwise we get xml parsing errors
+MoinMoin.0428-escape_lt_in_links.java-regex=(\[\[[^\]]*?)(<)(.*?\]\]){replace-with}$1%3C$3
+MoinMoin.0429-escape_gt_in_links.java-regex=(\[\[[^\]]*?)(>)(.*?\]\]){replace-with}$1%3E$3
+
+# External links
+#MoinMoin.0430-moinlink_external_link.java-regex=\[(\w+:\S+) ([^\]\n\r]+)\]{replace-with}[$2|$1]
+#MoinMoin.0430-moinlink_external_link.java-regex=\[\[(\w+:\S+) *\|([^\]\n\r]+)\]\]{replace-with}[$2|$1]
+#MoinMoin.0431-moinlink_internal_link.java-regex=\[\[ *(\S+)\ *|([^\]\n\r]+)\]\]{replace-with}[$2|$1]
+
+MoinMoin.0431-moinlink_internal_link.java-regex=\[\[([^\|\n\r]+)\|([^\]\n\r]+)\]\]{replace-with}[$2|$1]
+
+MoinMoin.0432-moinlink_doublebrackets.java-regex-tokenizer=\[\[([^\]]*)\]\]{replace-with}[$1]
+
+# nimmt spaces aus links vorne und hinten
+MoinMoin.0433-moinlink_cleanspaces.java-regex=\[ *([^\]]*?) *\]{replace-with}[$1]
+
+# WikiNames (not inside links, i.e. not [XXX])
+# Subpage WikiName regex for MoinMoin.0010.content-hierarchy-setname.property=true
+# MoinMoin.0449-moinlink_wikiname-subpage.java-regex=(^|\s)(([A-Z][a-z][a-z0-9]*){2,})/(([A-Z][a-z][a-z0-9]*){2,})(?![^\[]*\]){replace-with}$1[$4]
+# Subpage WikiName regex for MoinMoin.0010.content-hierarchy-setname.property=false
+MoinMoin.0449-moinlink_wikiname-subpage.java-regex=(^|\s)(([A-Z][a-z][a-z0-9]*){2,})/(([A-Z][a-z][a-z0-9]*){2,})(?![^\[]*\]){replace-with}$1[$2 $4]
+MoinMoin.0450-moinlink_wikiname.java-regex=(^|\s)(([A-Z][a-z][a-z0-9]*){2,})(?![^\[]*\]){replace-with}$1[$2]
+
+# Escaped WikiNames (not inside links, i.e. not [XXX])
+MoinMoin.0451-re_escapeWiki.java-regex-tokenizer=([A-Z][a-z0-9]*)'{6}([A-Z][a-z0-9]*)(?![^\[]*\]){replace-with}$1$2
+MoinMoin.0452-re_escapeWikiName2.java-regex-tokenizer=([A-Z][a-z0-9]*)``([A-Z][a-z0-9]*)(?![^\[]*\]){replace-with}$1$2
+MoinMoin.0453-re_escapeWikiName3.java-regex-tokenizer=!(([A-Z][a-z][a-z0-9]*){2,})(?![^\[]*\]){replace-with}$1
+
+# <<BR>> -> newline
+#MoinMoin.0589-macro_br1.java-regex=<<BR>>(\s*\S{1}){replace-with}NEWLINE$1
+MoinMoin.0480-macro_br1.java-regex=<<BR>>{replace-with}NEWLINE
+MoinMoin.0481-macro_br.java-regex=(\[\[BR\]\])|(<<BR>>){replace-with}
+
+# Bold and italics (and single quotes)
+MoinMoin.0500-hide_single_quotes.java-regex=([^'])'([^']){replace-with}$1XXXSINGLEQUOTE4711XXX$2
+MoinMoin.0501-re_bold_italics.java-regex='{5}([^']+?)(\s*)'{5}{replace-with}*_$1_*$2
+MoinMoin.0502-re_bold_italics.java-regex='{5}([^']+)'{2}([^']+?)(\s*)'{3}{replace-with}*_$1_$2*$3
+MoinMoin.0503-re_bold_italics.java-regex='{5}([^']+)'{3}([^']+?)(\s*)'{2}{replace-with}_*$1*$2_$3
+MoinMoin.0504-re_bold_italics.java-regex='{2}([^']+)'{3}([^']+?)(\s*)'{5}{replace-with}_$1*$2*_$3
+MoinMoin.0505-re_bold_italics.java-regex='{3}([^']+)'{2}([^']+?)(\s*)'{5}{replace-with}*$1_$2_*$3
+MoinMoin.0506-re_bold.java-regex=(?s)'{3}(.+?)(\s*)'{3}{replace-with}*$1*$2
+#MoinMoin.0507-re_italics.java-regex=(^|[^'])'{2}([^']+)'{2}([^']|$){replace-with}$1_$2_$3
+MoinMoin.0507-re_italics.java-regex=(?s)'{2}(.+?)(\s*)'{2}{replace-with}_$1_$2
+MoinMoin.0508-restore_single_quotes.java-regex=XXXSINGLEQUOTE4711XXX{replace-with}'
+
+# Smileys. Confluence supports 22 emoticons, MoinMoin has 31. Therefore,
+# some conversions are less than perfect (e.g., the "angry" and "tired"
+# emoticons are turned into the "sad" one).
+MoinMoin.0600-smileyMacro.java-regex=\[{2}ShowSmileys\]{2}{replace-with}
+MoinMoin.0600-smileys.java-regex=(\s)\(!\)(\s){replace-with}$1(on)$2
+MoinMoin.0601-smileys.java-regex=(\s)\(./\)(\s){replace-with}$1(/)$2
+MoinMoin.0602-smileys.java-regex=(\s)/!\\(\s){replace-with}$1(!)$2
+MoinMoin.0603-smileys.java-regex=(\s):-\)\)(\s){replace-with}$1:D$2
+MoinMoin.0604-smileys.java-regex=(\s):\)\)(\s){replace-with}$1:D$2
+MoinMoin.0605-smileys.java-regex=(\s):-\((\s){replace-with}$1:($2
+MoinMoin.0606-smileys.java-regex=(\s):-\)(\s){replace-with}$1:)$2
+MoinMoin.0607-smileys.java-regex=(\s):-\?(\s){replace-with}$1:P$2
+MoinMoin.0608-smileys.java-regex=(\s);-\)(\s){replace-with}$1;)$2
+MoinMoin.0609-smileys.java-regex=(\s)<!>(\s){replace-with}$1(!)$2
+MoinMoin.0610-smileys.java-regex=(\s)<:\((\s){replace-with}$1:($2
+MoinMoin.0611-smileys.java-regex=(\s)>:>(\s){replace-with}$1:)$2
+MoinMoin.0612-smileys.java-regex=(\s)X-\((\s){replace-with}$1:($2
+MoinMoin.0621-smileys.java-regex=(\s)\|\)(\s){replace-with}$1:($2
+MoinMoin.0622-smileys.java-regex=(\s)\|-\)(\s){replace-with}$1:($2
+MoinMoin.0623-smileys.java-regex=(\s):o(\s){replace-with}$1:P$2
+MoinMoin.0624-smileys.java-regex=(\s)B\)(\s){replace-with}$1:)$2
+MoinMoin.0625-smileys.java-regex=(\s)B-\)(\s){replace-with}$1:)$2
+MoinMoin.0626-smileys.java-regex=(\s):\\(\s){replace-with}$1:)$2
+
+# Macros
+MoinMoin.0600-macros.java-regex=\[{2}([^\]\n\r]*)\]{2}{replace-with}{$1}
+
+# Tables
+MoinMoin.1099-tables.java-regex=\|{2}<([^>]*)>{replace-with}||
+MoinMoin.1100-tables.java-regex=\|{20}([^\|\n]+)\|{2}{replace-with}|| | | | |$1| | | | | ||
+MoinMoin.1101-tables.java-regex=\|{18}([^\|\n]+)\|{2}{replace-with}|| | | | |$1| | | | ||
+MoinMoin.1102-tables.java-regex=\|{16}([^\|\n]+)\|{2}{replace-with}|| | | |$1| | | | ||
+MoinMoin.1103-tables.java-regex=\|{14}([^\|\n]+)\|{2}{replace-with}|| | | |$1| | | ||
+MoinMoin.1104-tables.java-regex=\|{12}([^\|\n]+)\|{2}{replace-with}|| | |$1| | | ||
+MoinMoin.1105-tables.java-regex=\|{10}([^\|\n]+)\|{2}{replace-with}|| | |$1| | ||
+MoinMoin.1106-tables.java-regex=\|{8}([^\|\n]+)\|{2}{replace-with}|| |$1| | ||
+MoinMoin.1107-tables.java-regex=\|{6}([^\|\n]+)\|{2}{replace-with}|| |$1| ||
+MoinMoin.1108-tables.java-regex=\|{4}([^\|\n]+)\|{2}{replace-with}||$1| ||
+MoinMoin.1109-tables.java-regex=\|{20}{replace-with}|| || || || || || || || || ||
+MoinMoin.1110-tables.java-regex=\|{18}{replace-with}|| || || || || || || || ||
+MoinMoin.1111-tables.java-regex=\|{16}{replace-with}|| || || || || || || ||
+MoinMoin.1112-tables.java-regex=\|{14}{replace-with}|| || || || || || ||
+MoinMoin.1113-tables.java-regex=\|{12}{replace-with}|| || || || || ||
+MoinMoin.1114-tables.java-regex=\|{10}{replace-with}|| || || || ||
+MoinMoin.1115-tables.java-regex=\|{8}{replace-with}|| || || ||
+MoinMoin.1116-tables.java-regex=\|{6}{replace-with}|| || ||
+MoinMoin.1117-tables.java-regex=\|{4}{replace-with}|| ||
+MoinMoin.1118-tables.java-regex=\|{2}{replace-with}|
+
+MoinMoin.2000-detokenize.class=com.atlassian.uwc.converters.DetokenizerConverter
+## If we still have an extension get rid of it
+MoinMoin.3000-remove-extension.class=com.atlassian.uwc.converters.ChopPageExtensionsConverter
+

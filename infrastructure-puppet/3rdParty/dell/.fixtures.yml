@@ -1,0 +1,7 @@
+fixtures:
+  forge_modules:
+    apt: 'puppetlabs-apt'
+    stdlib: 'puppetlabs-stdlib'
+    vcsrepo: 'puppetlabs-vcsrepo'
+  symlinks:
+    dell: "#{source_dir}"

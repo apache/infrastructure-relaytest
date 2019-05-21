@@ -1,0 +1,31 @@
+##################
+[<%= @real_jailname %>]
+enabled  = <%= @real_status %>
+<% if @real_filter != '' -%>
+filter   = <%= @real_filter %>
+<% end -%>
+<% if @array_ignoreip != [] -%>
+ignoreip = <%= @array_ignoreip * ' ' %>
+<% end -%>
+<% if @array_port != [] -%>
+port     = <%= @array_port * ',' %>
+<% end -%>
+<% if @real_protocol -%>
+protocol = <%= @real_protocol %>
+<% end -%>
+<% if @array_action != [] -%>
+action   = <%= @array_action.join("\n\t") %>
+<% end -%>
+<% if @array_logpath != [] -%>
+logpath  = <%= @array_logpath.join("\n\t") %>
+<% end -%>
+<% if @real_maxretry != '' -%>
+maxretry = <%= @real_maxretry %>
+<% end -%>
+<% if @real_bantime != '' -%>
+bantime  = <%= @real_bantime %>
+<% end -%>
+<% if @findtime != '' -%>
+findtime = <%= @findtime %>
+<% end -%>
+

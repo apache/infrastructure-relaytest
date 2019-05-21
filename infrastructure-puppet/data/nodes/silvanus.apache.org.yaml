@@ -1,0 +1,34 @@
+---
+classes:
+  - buildbot_slave
+  - buildbot_slave::rat
+  - loggy
+  - tomcat
+
+buildbot_slave::slave_name: 'silvanus_ubuntu'
+buildbot_slave::required_packages:
+  - 'libtool'
+  - 'libpcre3' 
+  - 'libpcre3-dev'
+  - 'graphviz'
+  - 'graphviz-dev'
+  - 'ruby2.0'
+  - 'ruby2.0-dev'
+
+buildbot_slave::rat::projects:
+  - 'tomcat'
+
+tomcat::install:
+  '/opt/tomcat7':
+    source_url: 'https://dist.apache.org/repos/dist/release/tomcat/tomcat-7/v7.0.75/bin/apache-tomcat-7.0.75.tar.gz'
+    manage_user: true
+    manage_group: true
+    user: 'tomcat7'
+    group: 'tomcat7'
+
+tomcat::service:
+  'tomcat7':
+    catalina_base: '/opt/tomcat7'
+    service_ensure: 'stopped'
+    use_init: false
+    user: 'tomcat7'

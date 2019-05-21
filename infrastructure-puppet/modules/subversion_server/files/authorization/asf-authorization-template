@@ -1,0 +1,1996 @@
+# This file is in the Git infrastructure-puppet repo at:
+# modules/subversion_server/files/authorization/asf-authorization-template
+
+# In the infrastructure-puppet repo, make a pull request against the repo on
+# github https://github.com/apache/infrastructure-puppet/ with your intended
+# changes and then ping Infra in Hipchat to get someone to look at it.
+# INFRA have a workflow document:
+
+# https://cwiki.apache.org/confluence/display/INFRA/Git+workflow+for+infrastructure-puppet+repo
+
+# Note that it can take up to 40 minutes or so for the live file to be updated
+# after Infra have merged the change
+
+# LDAP groups have two forms:
+# ==========================
+# Unix/Posix groups and Committee groups.
+#
+# The following commands can be used with the LDAP groups:
+#
+# list_unix_group.pl [<group>|--user=<uid>] [--help]
+# modify_unix_group.pl <group> (--add=<list>|--rm=<list>|--help)
+#
+# list_committee.pl [<committee>|--user=<uid>] [--help]
+# modify_committee.pl <committee> (--add=<list>|--rm=<list>|--help)
+#
+# To add an existing committer "oldhand" as a committer for "tlp", use:
+#     modify_unix_group.pl tlp -add=oldhand
+#
+# To add oldhand to the PMC, use:
+#     modify_committee.pl tlp -add=oldhand
+#
+# Except in these two cases, you would never need to run modify_* yourself.
+#
+# Note that some groups are not defined in LDAP, notably incubating podlings.
+# Setup for new podlings requires that a new group be added to this
+# file, e.g.
+# newpodling=mntr1,mntr2,cmtr1,cmtr2
+# ...
+# [/incubator/newpodling]
+# @newpodling = rw
+
+# Adding new podling committers
+# =============================
+# Podlings currently don't use LDAP to define the list of committers.
+# To grant access to the podling's SVN tree, add the user to the appropriate podling
+# group definition (keep it alphabetical), e.g.
+#
+# podling=alice,bill,charles,newuser,thomas
+#
+# If an existing ASF committer becomes a podling member for the first time, they need to be added to the 'Incubator' UNIX group.
+# This has to be done by someone with PMC chair karma. Login to people (minotaur) and run:
+#
+# $ modify_unix_group.pl incubator -add=newuser
+#
+# N.B. The current list of incubator group members can be found at:
+# http://people.apache.org/committers-by-project.html#incubator
+# (updated several times a day), or any committer can login to poeple and run:
+# $ list_unix_group.pl incubator | grep newuser
+# to see if newuser is in the list
+
+[groups]
+committers={ldap:cn=committers,ou=groups,dc=apache,dc=org;attr=memberUid}
+
+# Don't remove group definitions from this file if pit-authorization-template
+# refers to them.
+
+### marker for tlpreq to add new entries ###
+activemq={ldap:cn=activemq,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+activemq-pmc={reuse:pit-authorization:activemq-pmc}
+accumulo={ldap:cn=accumulo,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+accumulo-pmc={reuse:pit-authorization:accumulo-pmc}
+airavata={ldap:cn=airavata,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+airavata-pmc={reuse:pit-authorization:airavata-pmc}
+allura={ldap:cn=allura,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+allura-pmc={reuse:pit-authorization:allura-pmc}
+ambari={ldap:cn=ambari,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ambari-pmc={reuse:pit-authorization:ambari-pmc}
+any23={ldap:cn=any23,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+any23-pmc={reuse:pit-authorization:any23-pmc}
+ant={ldap:cn=ant,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ant-pmc={reuse:pit-authorization:ant-pmc}
+apex={ldap:cn=apex,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+apex-pmc={reuse:pit-authorization:apex-pmc}
+apr={ldap:cn=apr,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+apr-pmc={reuse:pit-authorization:apr-pmc}
+archiva={ldap:cn=archiva,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+archiva-pmc={reuse:pit-authorization:archiva-pmc}
+aries={ldap:cn=aries,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+aries-pmc={reuse:pit-authorization:aries-pmc}
+avro={ldap:cn=avro,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+avro-pmc={reuse:pit-authorization:avro-pmc}
+attic={ldap:cn=attic,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+aurora={ldap:cn=aurora,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+aurora-pmc={reuse:pit-authorization:aurora-pmc}
+axis={ldap:cn=axis,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+axis-pmc={reuse:pit-authorization:axis-pmc}
+# awf=schildmeijer,jmeehan,nwhitehead,slemesle
+bigtop={ldap:cn=bigtop,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+bigtop-pmc={reuse:pit-authorization:bigtop-pmc}
+bloodhound={ldap:cn=bloodhound,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+bloodhound-pmc={reuse:pit-authorization:bloodhound-pmc}
+board={ldap:cn=board,ou=groups,ou=services,dc=apache,dc=org}
+bookkeeper={ldap:cn=bookkeeper,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+brooklyn={ldap:cn=brooklyn,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+brooklyn-pmc={reuse:pit-authorization:brooklyn-pmc}
+buildr={ldap:cn=buildr,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+buildr-pmc={reuse:pit-authorization:buildr-pmc}
+bval={ldap:cn=bval,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+bval-pmc={reuse:pit-authorization:bval-pmc}
+calcite={ldap:cn=calcite,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+calcite-pmc={reuse:pit-authorization:calcite-pmc}
+camel={ldap:cn=camel,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+camel-pmc={reuse:pit-authorization:camel-pmc}
+cassandra={ldap:cn=cassandra,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cassandra-pmc={reuse:pit-authorization:cassandra-pmc}
+cayenne={ldap:cn=cayenne,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cayenne-pmc={reuse:pit-authorization:cayenne-pmc}
+celix={ldap:cn=celix,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+celix-pmc={reuse:pit-authorization:celix-pmc}
+chemistry={ldap:cn=chemistry,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+chemistry-pmc={reuse:pit-authorization:chemistry-pmc}
+chukwa={ldap:cn=chukwa,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+chukwa-pmc={reuse:pit-authorization:chukwa-pmc}
+clerezza={ldap:cn=clerezza,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+clerezza-pmc={reuse:pit-authorization:clerezza-pmc}
+climate={ldap:cn=climate,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+climate-pmc={reuse:pit-authorization:climate-pmc}
+cloudstack={ldap:cn=cloudstack,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cloudstack-pmc={reuse:pit-authorization:cloudstack-pmc}
+cocoon={ldap:cn=cocoon,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cocoon-pmc={reuse:pit-authorization:cocoon-pmc}
+commons={ldap:cn=commons,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+commons-pmc={reuse:pit-authorization:commons-pmc}
+cordova={ldap:cn=cordova,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cordova-pmc={reuse:pit-authorization:cordova-pmc}
+couchdb={ldap:cn=couchdb,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+couchdb-pmc={reuse:pit-authorization:couchdb-pmc}
+creadur={ldap:cn=creadur,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+creadur-pmc={reuse:pit-authorization:creadur-pmc}
+crunch={ldap:cn=crunch,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+crunch-pmc={reuse:pit-authorization:crunch-pmc}
+ctakes={ldap:cn=ctakes,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ctakes-pmc={reuse:pit-authorization:ctakes-pmc}
+curator={ldap:cn=curator,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+curator-pmc={reuse:pit-authorization:curator-pmc}
+cxf={ldap:cn=cxf,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+cxf-pmc={reuse:pit-authorization:cxf-pmc}
+datafu={ldap:cn=datafu,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+db={ldap:cn=db,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+db-ddlutils={ldap:cn=db-ddlutils,ou=auth,ou=groups,dc=apache,dc=org}
+db-torque={ldap:cn=db-torque,ou=auth,ou=groups,dc=apache,dc=org}
+db-jdo={ldap:cn=db-jdo,ou=auth,ou=groups,dc=apache,dc=org}
+db-pmc={reuse:pit-authorization:db-pmc}
+deltaspike={ldap:cn=deltaspike,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+deltaspike-pmc={reuse:pit-authorization:deltaspike-pmc}
+# depot=nicolaken,ajack,anou_mana,mmay,nickchalko
+db-derby={ldap:cn=db-derby,ou=auth,ou=groups,dc=apache,dc=org}
+#directmemory=antelder,bperroud,grobmeier,iocanel,mcucchiara,olamy,raffaeleguidi,simoneg,simonetripodi,sylvain,tommaso,twilliams
+directory={ldap:cn=directory,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+directory-pmc={reuse:pit-authorization:directory-pmc}
+drill={ldap:cn=drill,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+drill-pmc={reuse:pit-authorization:drill-pmc}
+eagle={ldap:cn=eagle,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+eagle-pmc={reuse:pit-authorization:eagle-pmc}
+empire-db={ldap:cn=empire-db,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+empire-db-pmc={reuse:pit-authorization:empire-db-pmc}
+falcon={ldap:cn=falcon,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+falcon-pmc={reuse:pit-authorization:falcon-pmc}
+felix={ldap:cn=felix,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+felix-pmc={reuse:pit-authorization:felix-pmc}
+fineract={ldap:cn=fineract,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+fineract-pmc={reuse:pit-authorization:fineract-pmc}
+flex={ldap:cn=flex,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+flex-pmc={reuse:pit-authorization:flex-pmc}
+flink={ldap:cn=flink,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+flink-pmc={reuse:pit-authorization:flink-pmc}
+flume={ldap:cn=flume,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+flume-pmc={reuse:pit-authorization:flume-pmc}
+forrest={ldap:cn=forrest,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+forrest-pmc={reuse:pit-authorization:forrest-pmc}
+fundraising={reuse:pit-authorization:fundraising}
+geronimo={ldap:cn=geronimo,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+geronimo-pmc={reuse:pit-authorization:geronimo-pmc}
+giraph={ldap:cn=giraph,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+giraph-pmc={reuse:pit-authorization:giraph-pmc}
+gora={ldap:cn=gora,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+gora-pmc={reuse:pit-authorization:gora-pmc}
+griffin={ldap:cn=griffin,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+gump={ldap:cn=gump,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+#only here to ease LDAP migration
+gump-pmc={reuse:pit-authorization:gump-pmc}
+hadoop-pmc={reuse:pit-authorization:hadoop-pmc}
+hadoop={ldap:cn=hadoop,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+hama={ldap:cn=hama,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+hama-pmc={reuse:pit-authorization:hama-pmc}
+hbase={ldap:cn=hbase,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+hbase-pmc={reuse:pit-authorization:hbase-pmc}
+helix={ldap:cn=helix,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+helix-pmc={reuse:pit-authorization:helix-pmc}
+hive={ldap:cn=hive,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+hive-pmc={reuse:pit-authorization:hive-pmc}
+hive-hcatalog={ldap:cn=hive-hcatalog,ou=auth,ou=groups,dc=apache,dc=org}
+httpcomponents={ldap:cn=httpcomponents,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+httpcomponents-pmc={reuse:pit-authorization:httpcomponents-pmc}
+httpd={ldap:cn=httpd,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+httpd-pmc={reuse:pit-authorization:httpd-pmc}
+ignite={ldap:cn=ignite,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ignite-pmc={reuse:pit-authorization:ignite-pmc}
+#note httpd-pmc include rasmus, however no iCLA will be filed so the user cannot be added to svn auth
+# no ldap account: dgaudet,pcs,
+# httpd-emeritus=AndrewWilson,akosut,awm,bhyde,brianb,brianp,cliff,davidw,dreid,drtr,fanf,grisha,ianh,jgallacher,jwoolley,marc,nlehuen,randy,rbb,ridruejo,robh,rst,sameer,stas,stoddard,thommay
+incubator={ldap:cn=incubator,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+incubator-pmc={reuse:pit-authorization:incubator-pmc}
+isis={ldap:cn=isis,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+isis-pmc={reuse:pit-authorization:isis-pmc}
+jackrabbit={ldap:cn=jackrabbit,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jackrabbit-emeritus={ldap:cn=jackrabbit-emeritus,ou=auth,ou=groups,dc=apache,dc=org}
+jackrabbit-pmc={reuse:pit-authorization:jackrabbit-pmc}
+james={ldap:cn=james,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+james-pmc={reuse:pit-authorization:james-pmc}
+jclouds={ldap:cn=jclouds,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jclouds-pmc={reuse:pit-authorization:jclouds-pmc}
+jena={ldap:cn=jena,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jena-pmc={reuse:pit-authorization:jena-pmc}
+jmeter={ldap:cn=jmeter,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jmeter-pmc={reuse:pit-authorization:jmeter-pmc}
+johnzon={ldap:cn=johnzon,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+johnzon-pmc={reuse:pit-authorization:johnzon-pmc}
+joshua={ldap:cn=joshua,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jspwiki={ldap:cn=jspwiki,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+jspwiki-pmc={reuse:pit-authorization:jspwiki-pmc}
+juddi={ldap:cn=juddi,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+juddi-pmc={reuse:pit-authorization:juddi-pmc}
+karaf={ldap:cn=karaf,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+karaf-pmc={reuse:pit-authorization:karaf-pmc}
+knox={ldap:cn=knox,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+knox-pmc={reuse:pit-authorization:knox-pmc}
+kudu={ldap:cn=kudu,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+kudu-pmc={reuse:pit-authorization:kudu-pmc}
+kylin={ldap:cn=kylin,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+kylin-pmc={reuse:pit-authorization:kylin-pmc}
+kafka={ldap:cn=kafka,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+kafka-pmc={reuse:pit-authorization:kafka-pmc}
+labs={ldap:cn=labs,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+labs-pmc={reuse:pit-authorization:labs-pmc}
+lens={ldap:cn=lens,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+lens-pmc={reuse:pit-authorization:lens-pmc}
+libcloud={ldap:cn=libcloud,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+libcloud-pmc={reuse:pit-authorization:libcloud-pmc}
+logging-pmc={reuse:pit-authorization:logging-pmc}
+logging={ldap:cn=logging,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+lucene={ldap:cn=lucene,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+lucene-pmc={reuse:pit-authorization:lucene-pmc}
+lucene-connectors={ldap:cn=lucene-connectors,ou=auth,ou=groups,dc=apache,dc=org}
+# Note: 'lucene-lucy' is legacy lucene subproject, 'lucy' is newer podling project
+# Note: 'lucene-lucy' - the lucy podling just graduated.
+lucene-lucy={ldap:cn=lucene-lucy,ou=auth,ou=groups,dc=apache,dc=org}
+lucene-orp={ldap:cn=lucene-orp,ou=auth,ou=groups,dc=apache,dc=org}
+lucene-py={ldap:cn=lucene-py,ou=auth,ou=groups,dc=apache,dc=org}
+lucenenet={ldap:cn=lucenenet,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+lucenenet-pmc={reuse:pit-authorization:lucenenet-pmc}
+mahout={ldap:cn=mahout,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+mahout-pmc={reuse:pit-authorization:mahout-pmc}
+manifoldcf={ldap:cn=manifoldcf,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+manifoldcf-pmc={reuse:pit-authorization:manifoldcf-pmc}
+marmotta={ldap:cn=marmotta,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+marmotta-pmc={reuse:pit-authorization:marmotta-pmc}
+maven={ldap:cn=maven,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+maven-pmc={reuse:pit-authorization:maven-pmc}
+mesos={ldap:cn=mesos,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+mesos-pmc={reuse:pit-authorization:mesos-pmc}
+metamodel={ldap:cn=metamodel,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+metamodel-pmc={reuse:pit-authorization:metamodel-pmc}
+mina={ldap:cn=mina,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+mina-pmc={reuse:pit-authorization:mina-pmc}
+myfaces={ldap:cn=myfaces,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+myfaces-pmc={reuse:pit-authorization:myfaces-pmc}
+myriad={ldap:cn=myriad,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+nifi={ldap:cn=nifi,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+nifi-pmc={reuse:pit-authorization:nifi-pmc}
+nutch={ldap:cn=nutch,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+nutch-pmc={reuse:pit-authorization:nutch-pmc}
+ode={ldap:cn=ode,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ode-pmc={reuse:pit-authorization:ode-pmc}
+ofbiz={ldap:cn=ofbiz,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ofbiz-pmc={reuse:pit-authorization:ofbiz-pmc}
+olingo={ldap:cn=olingo,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+olingo-pmc={reuse:pit-authorization:olingo-pmc}
+oodt={ldap:cn=oodt,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+oodt-pmc={reuse:pit-authorization:oodt-pmc}
+oozie={ldap:cn=oozie,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+oozie-pmc={reuse:pit-authorization:oozie-pmc}
+openjpa={ldap:cn=openjpa,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+openjpa-pmc={reuse:pit-authorization:openjpa-pmc}
+openmeetings={ldap:cn=openmeetings,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+openmeetings-pmc={reuse:pit-authorization:openmeetings-pmc}
+opennlp={ldap:cn=opennlp,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+opennlp-pmc={reuse:pit-authorization:opennlp-pmc}
+openoffice={ldap:cn=openoffice,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+openoffice-pmc={reuse:pit-authorization:openoffice-pmc}
+openwebbeans={ldap:cn=openwebbeans,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+openwebbeans-pmc={reuse:pit-authorization:openwebbeans-pmc}
+orc={ldap:cn=orc,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+orc-pmc={reuse:pit-authorization:orc-pmc}
+parquet={ldap:cn=parquet,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+parquet-pmc={reuse:pit-authorization:parquet-pmc}
+pdfbox={ldap:cn=pdfbox,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+pdfbox-pmc={reuse:pit-authorization:pdfbox-pmc}
+pig={ldap:cn=pig,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+pig-pmc={reuse:pit-authorization:pig-pmc}
+perl={ldap:cn=perl,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+perl-docs={ldap:cn=perl-docs,ou=auth,ou=groups,dc=apache,dc=org}
+perl-test={ldap:cn=perl-test,ou=auth,ou=groups,dc=apache,dc=org}
+phoenix={ldap:cn=phoenix,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+phoenix-pmc={reuse:pit-authorization:phoenix-pmc}
+perl-sizelimit={ldap:cn=perl-sizelimit,ou=auth,ou=groups,dc=apache,dc=org}
+perl-reload=
+perl-bootstrap=
+perl-dbi=
+perl-pmc={reuse:pit-authorization:perl-pmc}
+pivot={ldap:cn=pivot,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+pivot-pmc={reuse:pit-authorization:pivot-pmc}
+poi={ldap:cn=poi,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+poi-pmc={reuse:pit-authorization:poi-pmc}
+portals={ldap:cn=portals,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+portals-pmc={reuse:pit-authorization:portals-pmc}
+qpid={ldap:cn=qpid,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+qpid-pmc={reuse:pit-authorization:qpid-pmc}
+edgent={ldap:cn=edgent,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ranger={ldap:cn=ranger,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+ranger-pmc={reuse:pit-authorization:ranger-pmc}
+reef={ldap:cn=reef,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+reef-pmc={reuse:pit-authorization:reef-pmc}
+river={ldap:cn=river,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+river-pmc={reuse:pit-authorization:river-pmc}
+roller={ldap:cn=roller,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+roller-pmc={reuse:pit-authorization:roller-pmc}
+royale={ldap:cn=royale,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+royale-pmc={reuse:pit-authorization:royale-pmc}
+rya={ldap:cn=rya,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+s2graph={ldap:cn=s2graph,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+samoa={ldap:cn=samoa,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+samza={ldap:cn=samza,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+samza-pmc={reuse:pit-authorization:samza-pmc}
+flagon={ldap:cn=flagon,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+santuario={ldap:cn=santuario,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+santuario-pmc={reuse:pit-authorization:santuario-pmc}
+sentry={ldap:cn=sentry,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+sentry-pmc={reuse:pit-authorization:sentry-pmc}
+# Don't remove 'serf'; pit and committers-index use it
+serf={ldap:cn=serf,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+serf-pmc={reuse:pit-authorization:serf-pmc}
+servicemix={ldap:cn=servicemix,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+servicemix-pmc={reuse:pit-authorization:servicemix-pmc}
+shiro={ldap:cn=shiro,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+shiro-pmc={reuse:pit-authorization:shiro-pmc}
+singa={ldap:cn=singa,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+sis={ldap:cn=sis,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+sis-pmc={reuse:pit-authorization:sis-pmc}
+sling={ldap:cn=sling,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+sling-pmc={reuse:pit-authorization:sling-pmc}
+sling-emeritus={ldap:cn=sling-emeritus,ou=auth,ou=groups,dc=apache,dc=org}
+spamassassin={ldap:cn=spamassassin,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+spamassassin-pmc={reuse:pit-authorization:spamassassin-pmc}
+spark={ldap:cn=spark,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+spark-pmc={reuse:pit-authorization:spark-pmc}
+sqoop={ldap:cn=sqoop,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+sqoop-pmc={reuse:pit-authorization:sqoop-pmc}
+stanbol={ldap:cn=stanbol,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+stanbol-pmc={reuse:pit-authorization:stanbol-pmc}
+steve={ldap:cn=steve,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+steve-pmc={reuse:pit-authorization:steve-pmc}
+storm={ldap:cn=storm,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+storm-pmc={reuse:pit-authorization:storm-pmc}
+streams={ldap:cn=streams,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+streams-pmc={reuse:pit-authorization:streams-pmc}
+struts={ldap:cn=struts,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+struts-pmc={reuse:pit-authorization:struts-pmc}
+# Don't remove 'subversion'; pit and committers-index use it
+subversion={ldap:cn=subversion,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+subversion-pmc={reuse:pit-authorization:subversion-pmc}
+synapse={ldap:cn=synapse,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+synapse-pmc={reuse:pit-authorization:synapse-pmc}
+syncope={ldap:cn=syncope,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+syncope-pmc={reuse:pit-authorization:syncope-pmc}
+systemml={ldap:cn=systemml,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tajo={ldap:cn=tajo,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tajo-pmc={reuse:pit-authorization:tajo-pmc}
+tapestry={ldap:cn=tapestry,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tapestry-pmc={reuse:pit-authorization:tapestry-pmc}
+taverna={ldap:cn=taverna,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tcl={ldap:cn=tcl,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tcl-pmc={reuse:pit-authorization:tcl-pmc}
+tephra={ldap:cn=tephra,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tez={ldap:cn=tez,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tez-pmc={reuse:pit-authorization:tez-pmc}
+thrift={ldap:cn=thrift,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+thrift-pmc={reuse:pit-authorization:thrift-pmc}
+tika={ldap:cn=tika,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tika-pmc={reuse:pit-authorization:tika-pmc}
+tinkerpop={ldap:cn=tinkerpop,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tinkerpop-pmc={reuse:pit-authorization:tinkerpop-pmc}
+tomee={ldap:cn=tomee,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tomee-pmc={reuse:pit-authorization:tomee-pmc}
+tomcat={ldap:cn=tomcat,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+tomcat-pmc={reuse:pit-authorization:tomcat-pmc}
+toree={ldap:cn=toree,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+trafficserver={ldap:cn=trafficserver,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+trafficserver-pmc={reuse:pit-authorization:trafficserver-pmc}
+turbine={ldap:cn=turbine,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+turbine-pmc={reuse:pit-authorization:turbine-pmc}
+twill={ldap:cn=twill,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+twill-pmc={reuse:pit-authorization:twill-pmc}
+uima={ldap:cn=uima,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+uima-pmc={reuse:pit-authorization:uima-pmc}
+unomi={ldap:cn=unomi,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+unomi-pmc={reuse:pit-authorization:unomi-pmc}
+usergrid={ldap:cn=usergrid,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+usergrid-pmc={reuse:pit-authorization:usergrid-pmc}
+vcl={ldap:cn=vcl,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+vcl-pmc={reuse:pit-authorization:vcl-pmc}
+velocity={ldap:cn=velocity,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+velocity-pmc={reuse:pit-authorization:velocity-pmc}
+vxquery={ldap:cn=vxquery,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+vxquery-pmc={reuse:pit-authorization:vxquery-pmc}
+whimsy={ldap:cn=whimsy,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+whimsy-pmc={reuse:pit-authorization:whimsy-pmc}
+wicket={ldap:cn=wicket,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+wicket-pmc={reuse:pit-authorization:wicket-pmc}
+ws-pmc={reuse:pit-authorization:ws-pmc}
+ws={ldap:cn=ws,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+xalan={ldap:cn=xalan,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+xalan-pmc={reuse:pit-authorization:xalan-pmc}
+xerces-p={ldap:cn=xerces-p,ou=auth,ou=groups,dc=apache,dc=org}
+xerces-j={ldap:cn=xerces-j,ou=auth,ou=groups,dc=apache,dc=org}
+xerces-pmc={reuse:pit-authorization:xerces-pmc}
+xerces={ldap:cn=xerces,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+xml-axkit={ldap:cn=xml-axkit,ou=auth,ou=groups,dc=apache,dc=org}
+xml-commons={ldap:cn=xml-commons,ou=auth,ou=groups,dc=apache,dc=org}
+xmlgraphics-pmc={reuse:pit-authorization:xmlgraphics-pmc}
+xmlgraphics={ldap:cn=xmlgraphics,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+xmlgraphics-batik={ldap:cn=xmlgraphics-batik,ou=auth,ou=groups,dc=apache,dc=org}
+xmlgraphics-fop={ldap:cn=xmlgraphics-fop,ou=auth,ou=groups,dc=apache,dc=org}
+yetus={ldap:cn=yetus,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+yetus-pmc={reuse:pit-authorization:yetus-pmc}
+zeppelin={ldap:cn=zeppelin,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+zeppelin-pmc={reuse:pit-authorization:zeppelin-pmc}
+zookeeper={ldap:cn=zookeeper,ou=project,ou=groups,dc=apache,dc=org;attr=member}
+zookeeper-pmc={reuse:pit-authorization:zookeeper-pmc}
+
+# Not TLPs or podlings.
+apsite={reuse:pit-authorization:apsite}
+attic-pmc={reuse:pit-authorization:attic-pmc}
+comdev-pmc={reuse:pit-authorization:comdev-pmc}
+comdev={reuse:pit-authorization:comdev}
+concom={reuse:pit-authorization:concom}
+infrastructure={reuse:pit-authorization:infrastructure}
+infrastructure-interest={reuse:pit-authorization:infrastructure-interest}
+infrastructure-root={reuse:pit-authorization:infrastructure-root}
+member={reuse:pit-authorization:member}
+pmc-chairs={reuse:pit-authorization:pmc-chairs}
+security={reuse:pit-authorization:security}
+svnadmins={reuse:pit-authorization:svnadmins}
+
+[/]
+# Allow everyone read access
+* = r
+# Let the SVN admins have r/w access for now
+@svnadmins = rw
+
+[/abdera]
+@attic-pmc=rw
+
+[/accumulo/README]
+@accumulo = rw
+
+[/accumulo/site]
+@accumulo = rw
+
+[/ace]
+@attic-pmc = rw
+
+[/activemq]
+* = r
+
+[/activemq/activemq-dotnet]
+@activemq = r
+
+[/activemq/activemq-website]
+@activemq = rw
+
+[/airavata/site]
+@airavata=r
+
+[/allura]
+@allura = rw
+
+[/allura/site]
+@allura = rw
+
+[/ambari]
+@ambari = rw
+
+[/ant]
+@ant = r
+
+[/ant/ivy/updatesite]
+@ant = rw
+
+[/ant/site]
+@ant = rw
+
+[/any23]
+@any23 = r
+
+[/any23/committers]
+@any23 = rw
+
+[/any23/site]
+@any23 = rw
+
+[/any23/site-cms]
+@any23 = rw
+
+[/apr]
+@apr = rw
+
+[/archiva]
+@archiva = rw
+
+[/archiva/attic]
+* = r
+
+[/archiva/site-content]
+* = r
+
+[/archiva/sandbox]
+@committers  = rw
+
+#migrated to gitbox
+[/aries]
+* = r
+
+[/attic]
+@attic-pmc = rw
+
+[/attic/site]
+buildbot = rw
+
+[/aurora]
+@aurora = rw
+
+[/aurora/site]
+@aurora = rw
+
+[/avalon]
+* = r
+
+# avro migrated to git, some other stuff needs to be rw though
+[/avro]
+* = r
+
+[/avro/dist]
+@avro = rw
+
+[/avro/site]
+@avro = rw
+
+[/axis]
+@axis = rw
+
+[/axis/site]
+@axis = rw
+
+[/beehive]
+* = r
+
+[/beehive/site]
+@attic-pmc = rw
+
+[/bigtop/site]
+@bigtop = rw
+
+[/bloodhound]
+@committers = rw
+
+[/board]
+@board = rw
+buildbot = rw
+
+[/bookkeeper/site]
+@bookkeeper = rw
+
+[/buildr]
+* = r
+
+[/brooklyn]
+@brooklyn = rw
+
+[/buildr/site]
+@buildr = rw
+
+[/bval]
+@bval = rw
+
+[/bval/(trunk|tags|branches)]
+@bval = r
+
+[/camel]
+* = r
+
+[/calcite]
+* = r
+
+[/camel/website]
+@camel = rw
+
+[/cassandra]
+@cassandra = rw
+
+[/cayenne]
+@cayenne = rw
+
+[/cayenne/main]
+* = r
+
+[/celix]
+* = r
+
+[/celix/site]
+@celix = rw
+
+[/chemistry]
+@chemistry = rw
+
+[/chukwa]
+* = r
+
+[/chukwa/site]
+@chukwa = rw
+
+[/clerezza]
+@clerezza = r
+
+[/clerezza/site]
+@clerezza = rw
+
+[/click]
+@attic-pmc = rw
+* = r
+
+[/climate]
+@climate = r
+
+[/climate/site]
+@climate = rw
+
+[/cloudstack]
+@cloudstack = rw
+
+[/cloudstack/site/middleman]
+* = r
+
+[/cocoon]
+@cocoon = rw
+
+[/comdev]
+@committers = rw
+
+[/comdev/projects.apache.org/trunk/site/json]
+projects_role = rw
+
+[/comdev/reporter.apache.org/trunk/data/history]
+projects_role = rw
+
+[/comdev/reporter.apache.org/trunk/data/releases]
+projects_role = rw
+
+# Temporary for testing new host
+[/comdev/projects.apache.org/branches/TEST_INSTALL/site/json]
+projects_role = rw
+
+# Temporary for testing new host
+[/comdev/reporter.apache.org/branches/TEST_INSTALL/data/history]
+projects_role = rw
+
+# Temporary for testing new host
+[/comdev/reporter.apache.org/branches/TEST_INSTALL/data/releases]
+projects_role = rw
+
+[/commons]
+@committers = rw
+
+# migrated to git
+[/commons/proper]
+@commons-pmc = rw
+* = r
+
+# migrated to git
+[/commons/proper/csv]
+@commons-pmc = rw
+* = r
+
+# PMC only as it's moved to git. let them sort it out.
+[/commons/_moved_to_git]
+@commons-pmc = rw
+* = r
+
+# migrated to gitbox
+[/commons/proper/weaver]
+* = r
+[/commons/proper/jexl]
+* = r
+
+# Note: since commons/proper/[lang|math|scxml] have now been moved under _moved_to_git and
+# only a README remains, there is now no need to make those directory trees read-only.
+
+[/concom]
+@concom = rw
+
+[/concom/site]
+@committers = rw
+
+[/continuum]
+@attic-pmc = rw
+
+[/cordova]
+@cordova = rw
+
+[/couchdb]
+* = r
+
+[/couchdb/site]
+@couchdb = rw
+
+[/couchdb/supplement]
+@couchdb = rw
+
+[/couchdb/vendor]
+@couchdb = rw
+
+[/creadur]
+@creadur = rw
+
+[/creadur/rat]
+* = r
+
+[/crunch]
+@crunch = rw
+
+[/ctakes]
+@ctakes = rw
+
+[/curator]
+@curator = rw
+
+[/cxf]
+* = r
+
+[/cxf/sandbox]
+@committers  = rw
+
+[/cxf/web]
+@cxf = rw
+
+[/datafu]
+@datafu = rw
+
+[/db]
+@db = rw
+
+[/db/ddlutils]
+@db = rw
+@db-ddlutils = rw
+
+[/db/derby]
+@db-derby = rw
+
+[/db/jdo]
+@db = rw
+@db-jdo = rw
+
+[/db/ojb]
+* = r
+
+[/db/site]
+@db = rw
+@db-jdo = rw
+
+[/db/torque]
+@db = rw
+@db-torque = rw
+
+[/deltaspike]
+@deltaspike = rw
+
+[/devicemap]
+@attic-pmc = rw
+
+[/directmemory]
+@attic-pmc = rw
+
+[/directory]
+@directory = rw
+
+[/directory/(shared|studio|apacheds|documentation/samples|project|buildtools|mavibot)]
+* = r
+
+[/drill]
+@drill = rw
+
+[/empire-db]
+* = r
+
+[/empire-db/site]
+@empire-db = rw
+
+[/esme]
+@attic-pmc = rw
+
+[/etch]
+@attic-pmc = rw
+
+[/excalibur]
+* = r
+
+[/falcon]
+@falcon = rw
+
+[/felix]
+@felix = rw
+
+[/flex]
+@flex = rw
+
+[/flex/asjs]
+@flex = r
+
+[/flex/external]
+@flex = r
+
+[/flex/falcon]
+@flex = r
+
+[/flex/sdk]
+@flex = r
+
+[/flex/tlf]
+@flex = r
+
+[/flex/utilities]
+@flex = r
+
+[/flex/whiteboard]
+@flex = r
+
+[/flink]
+@flink = rw
+
+[/flume]
+@flume = r
+# flume is RO because the main repo has migrated to git
+
+[/flume/site]
+@flume = rw
+
+[/forrest]
+@forrest = rw
+@cocoon = rw
+
+[/fundraising/site]
+@fundraising = rw
+buildbot = rw
+
+[/geronimo/components/config]
+* = r
+
+[/geronimo]
+@geronimo = rw
+
+[/giraph]
+@giraph = r
+
+[/giraph/logo]
+@giraph = rw
+
+[/giraph/site]
+@giraph = rw
+
+[/gora]
+@gora = r
+
+[/gora/committers]
+@gora = rw
+
+[/gora/site]
+@gora = rw
+
+[/gump]
+@gump = rw
+
+# Anyone who can commit can commit to GUMP/metadata.
+[/gump/metadata]
+@committers  = rw
+* = r
+
+[/hadoop]
+@hadoop-pmc = r
+
+[/hadoop/nightly]
+@hadoop-pmc = rw
+
+[/hadoop/common]
+@hadoop = r
+
+[/hadoop/logos]
+@hadoop-pmc = rw
+
+[/hadoop/common/dist]
+@hadoop = rw
+
+[/hadoop/common/site]
+@hadoop = rw
+
+[/hama]
+* = r
+
+[/hama/site]
+@hama = rw
+
+[/harmony]
+* = r
+
+[/hbase/hbase.apache.org]
+* = r
+
+[/helix]
+@committers = rw
+
+[/hive]
+* = r
+
+[/hive/cms]
+@hive = rw
+@hive-hcatalog = rw
+
+[/hivemind]
+* = r
+
+[/httpcomponents]
+* = r
+
+[/httpcomponents/core]
+* = r
+
+[/httpcomponents/site]
+@httpcomponents = rw
+
+# INFRA-16738: This needs r/w still
+[/httpcomponents/httpasyncclient]
+@httpcomponents = rw
+
+[/httpd]
+@httpd = rw
+
+[/httpd/sandbox]
+@committers = rw
+
+[/ibatis]
+* = r
+
+[/incubator]
+@incubator-pmc = rw
+@member = rw
+
+[/ignite]
+@ignite = rw
+
+[/incubator/agila]
+* = r
+
+[/incubator/alois]
+* = r
+
+[/incubator/awf]
+* = r
+
+[/incubator/batchee/site]
+@incubator = rw
+
+[/incubator/beam]
+@incubator = rw
+
+[/incubator/callback]
+@incubator = rw
+
+[/incubator/droids]
+* = r
+
+[/eagle]
+@eagle = rw
+
+[/incubator/graffito]
+* = r
+
+[/incubator/griffin]
+@griffin = rw
+@incubator = rw
+
+[/incubator/hdt]
+* = r
+
+[/incubator/heraldry]
+* = r
+
+[/johnzon]
+@johnzon = rw
+
+[/joshua]
+@joshua = rw
+
+[/incubator/juice]
+* = r
+
+[/incubator/kalumet]
+* = r
+
+[/incubator/kato]
+* = r
+
+[/incubator/lcf]
+@lucene-connectors = rw
+
+[/incubator/log4cxx]
+* = r
+
+[/incubator/lokahi]
+* = r
+
+[/incubator/lucene4c]
+* = r
+
+[/incubator/milagro]
+@incubator = rw
+
+[/incubator/myriad]
+@myriad = rw
+
+[/incubator/nmaven]
+* = r
+
+[/incubator/npanday]
+* = r
+
+[/incubator/nuvem]
+* = r
+
+[/incubator/odf/trunk]
+* = r
+
+[/incubator/odf]
+@incubator = rw
+
+[/incubator/olio]
+* = r
+
+[/incubator/ooo]
+* = r
+
+[/incubator/photark]
+* = r
+
+[/incubator/provisionr]
+* = r
+
+[/incubator/public]
+@committers= rw
+@apsite = rw
+
+[/incubator/edgent]
+@edgent = rw
+
+[/incubator/rya]
+@rya = rw
+
+[/incubator/s2graph]
+@s2graph = rw
+
+[/incubator/s4]
+* = r
+
+[/incubator/samoa]
+@samoa = rw
+
+[/incubator/flagon]
+@flagon = rw
+
+[/incubator/singa]
+@singa = rw
+
+[/incubator/sirona]
+@committers= rw
+
+[/incubator/slider/site]
+@attic-pmc = rw
+
+[/incubator/socialsite]
+* = r
+
+[/incubator/streams]
+* = r
+
+[/incubator/streams/site]
+@incubator = rw
+
+[/systemml]
+@systemml = rw
+
+[/incubator/tamaya/site]
+@incubator = rw
+
+[/incubator/tashi]
+* = r
+
+[/incubator/taverna]
+@taverna = rw
+
+[/tinkerpop]
+@tinkerpop = rw
+
+[/incubator/toree]
+@toree = rw
+
+[/incubator/triplesoup]
+* = r
+
+[/incubator/tsik]
+* = r
+
+[/incubator/wadi]
+* = r
+
+[/incubator/wave]
+* = r
+
+[/incubator/xap]
+* = r
+@svnadmins = rw
+
+[/incubator/xmlbeanscxx]
+* = r
+
+[/incubator/yoko]
+* = r
+
+[/zeppelin/site]
+@zeppelin = rw
+
+[/incubator/zetacomponents]
+* = r
+
+[asf:/infrastructure]
+* = r
+
+[/infrastructure/financials]
+# Copy permissions from pit:/financials if needed
+@member = rw
+
+[/infrastructure/site]
+@committers = rw
+* = r
+
+[/infrastructure/site/trunk/content/security]
+@security = rw
+
+[/infrastructure/site-tools]
+@member = rw
+@pmc-chairs = rw
+@apsite = rw
+@infrastructure = rw
+* = r
+
+[/infrastructure/site-tools/trunk/projects]
+@infrastructure-interest = rw
+
+[/isis]
+@isis = r
+
+[/isis/site]
+@isis = r
+
+[/jackrabbit]
+@jackrabbit = rw
+@jackrabbit-emeritus = rw
+
+[/jackrabbit/sandbox]
+@committers  = rw
+
+[/jakarta]
+@svnadmins = rw
+
+# Allow Attic to fix up old Jakarta sites
+[/jakarta/site]
+@attic-pmc = rw
+
+# James has some sub projects moved to git, some still in svn, auth will look messy
+[/james]
+@james = rw
+
+# moved to gitbox
+[/james/hupa]
+* = r
+
+# moved to git
+[/james/jdkim]
+* = r
+
+# moved to git
+[/james/jsieve]
+* = r
+
+# moved to git
+[/james/jspf]
+* = r
+
+# moved to git
+[/james/mime4j]
+* = r
+
+# moved to git
+[/james/postage]
+* = r
+
+# moved to git
+[/james/project]
+* = r
+
+[/jclouds]
+@jclouds = rw
+
+[/jena]
+@jena= rw
+
+[/jmeter]
+@jmeter = rw
+
+[/jspwiki]
+@jspwiki = rw
+
+[/juddi]
+@juddi = r
+
+[/juddi/cms-site]
+@juddi = rw
+
+[/kafka]
+@kafka = r
+
+[/kafka/site]
+@kafka = rw
+
+[/karaf]
+@karaf = r
+
+[/karaf/site]
+@karaf = rw
+
+[/knox]
+@knox = rw
+
+[/kylin]
+@kylin = rw
+
+[/labs]
+@committers  = rw
+
+[/lens]
+@lens = rw
+
+[/lenya]
+@attic-pmc = rw
+
+[/libcloud]
+* = r
+
+[/libcloud/site]
+@libcloud = rw
+
+[/logging]
+@logging = rw
+
+[/logging/log4j/log4j2]
+@logging = r
+
+[/logging/log4php]
+@logging = r
+
+[/logging/log4net]
+@logging = r
+
+[/logging/sandbox]
+@committers = rw
+
+[/lucene]
+@lucene-pmc = rw
+
+[/lucene/cms]
+@lucene = rw
+@lucene-orp = rw
+@lucene-py = rw
+
+[/lucene/dev]
+@lucene = rw
+
+[/lucene/openrelevance]
+@lucene-orp = rw
+
+[/lucene/pylucene]
+@lucene-py=rw
+
+#####################
+# Obsolete Lucene/Solr
+
+[/lucene/java]
+@lucene = rw
+
+[/lucene/lucy]
+@lucene-lucy = rw
+
+[/lucene/mahout]
+@mahout = rw
+
+[/lucene/nutch]
+@nutch = rw
+
+[/lucene/site]
+@lucene = rw
+
+[/lucene/solr]
+@lucene = rw
+
+# end Obsolete Lucene/Solr
+##########################
+
+[/lucene.net]
+@lucenenet=r
+
+[/lucene.net/docs]
+@lucenenet=rw
+
+[/lucene.net/site]
+@lucenenet=rw
+
+[/lucy]
+@attic-pmc=rw
+
+[/mahout]
+@mahout = r
+
+[/mahout/collections]
+@mahout = rw
+
+[/mahout/collections-codegen-plugin]
+@mahout = rw
+
+[/mahout/pmc]
+@mahout = rw
+
+[/mahout/site]
+@mahout = rw
+
+[/manifoldcf]
+@manifoldcf = rw
+
+[/marmotta]
+@marmotta = rw
+
+[/maven]
+@maven = rw
+
+[/maven/website]
+@maven-pmc = rw
+svn-site-role = rw
+
+[/maven/doxia/website]
+@maven-pmc = rw
+svn-site-role = rw
+
+[/maven/(archetype|archetypes)]
+* = r
+
+[/maven/core-integration-testing]
+@maven = r
+
+[/maven/doxia/doxia]
+@maven = r
+
+#moved to gitbox INFRA-16361
+[/maven/doxia/site]
+*  = r
+
+[/maven/doxia/doxia-sitetools]
+@maven  = r
+
+[/maven/enforcer]
+@maven = r
+
+[/maven/indexer]
+@maven = r
+
+[/maven/maven-2]
+@maven = r
+
+[/maven/maven-3]
+@maven = r
+
+[/maven/jxr]
+@maven = r
+
+[/maven/plugin-testing]
+@maven = r
+
+[/maven/plugin-tools]
+@maven = r
+
+[/maven/release]
+@maven = r
+
+[/maven/sandbox]
+@committers  = rw
+
+[/maven/scm]
+@maven = r
+
+#moved to gitbox INFRA-16361
+[/maven/site]
+* = r
+
+[/maven/surefire]
+@maven = r
+
+[/maven/wagon]
+@maven = r
+
+[/maven-testing]
+@maven-pmc = rw
+
+[/mesos]
+@mesos = rw
+
+[/mesos/branches]
+* = r
+
+[/mesos/dist]
+* = r
+
+[/mesos/tags]
+* = r
+
+[/mesos/trunk]
+* = r
+
+[/metamodel]
+@metamodel = rw
+
+[/mina]
+@mina = r
+
+[/mina/metadata]
+@mina = rw
+
+[/mina/site]
+@mina = rw
+
+[/mrunit]
+@attic-pmc = rw
+
+[/mrunit/site]
+@attic-pmc = rw
+
+[/myfaces]
+@myfaces = rw
+
+[/myfaces/core]
+* = r
+
+[/myfaces/extensions/cdi]
+* = r
+
+[/myfaces/extensions/validator]
+* = r
+
+[/myfaces/extensions/scripting]
+* = r
+
+[/myfaces/myfaces-build-tools]
+* = r
+
+[/myfaces/html5]
+* = r
+
+[/myfaces/portlet-bridge]
+* = r
+
+[/myfaces/myfaces-master-pom]
+* = r
+
+[/myfaces/test]
+* = r
+
+[/myfaces/tobago]
+* = r
+
+[/myfaces/trinidad]
+* = r
+
+[/nifi]
+@nifi = rw
+
+# Moved to git
+[/nutch]
+* = r
+
+[/nutch/cms_site]
+@nutch = rw
+
+[/nutch/site]
+@nutch = rw
+
+[/ode]
+@ode=r
+
+[/ode/site]
+@ode=rw
+
+[/ofbiz]
+@ofbiz=rw
+
+[/olingo]
+@olingo = rw
+
+[/oltu]
+@attic-pmc = rw
+
+[/onami]
+@attic-pmc = rw
+
+[/oodt/cms_site]
+@oodt = rw
+
+[/oozie/site]
+@oozie = rw
+
+[/openjpa]
+*=r
+
+[/openjpa/site]
+@openjpa = rw
+
+[/openmeetings]
+* = r
+
+[/opennlp]
+@opennlp = r
+
+[/opennlp/site]
+@opennlp = rw
+
+[bigdata:/opennlp]
+@opennlp = rw
+
+[/openoffice]
+@openoffice = rw
+
+[/openoffice/pmc]
+* =
+
+[/openwebbeans]
+@openwebbeans = rw
+
+[/parquet]
+@parquet = rw
+
+[/parquet/site]
+@parquet = rw
+
+[/pdfbox]
+@pdfbox = rw
+
+[/perl]
+@perl = rw
+
+[/perl/Apache-Bootstrap]
+@perl-bootstrap = rw
+
+[/perl/Apache-DBI]
+@perl-dbi = rw
+
+[/perl/Apache-Reload]
+@perl-reload = rw
+
+[/perl/Apache-SizeLimit]
+@perl-sizelimit = rw
+
+[/perl/Apache-Test]
+@perl-test = rw
+@httpd = rw
+
+[/perl/modperl/docs]
+@perl-docs = rw
+
+[/phoenix]
+@phoenix = rw
+
+[/pig]
+@pig = rw
+
+[/pivot]
+@pivot = rw
+
+[/planet]
+@committers  = rw
+* = r
+
+[/poi]
+@poi = rw
+
+[/portals]
+@portals = rw
+
+[/portals/pluto]
+@portals = r
+
+[/portals/wsrp4j]
+* = r
+#-- Portals GSoC student
+#[/portals/jetspeed-2/branches/SummersOfCode-2005]
+#juan = rw
+#-- end GSoc
+
+[/qpid]
+@qpid = rw
+
+# moved to git:
+[/qpid/qpid-jms-amqp-0-x]
+* = r
+
+# moved to git:
+[/qpid/java]
+* = r
+
+# moved to git:
+[/qpid/dispatch]
+* = r
+
+# moved to git:
+[/qpid/jms]
+* = r
+
+# moved to git:
+[/qpid/proton]
+* = r
+
+[/quetzalcoatl]
+* = r
+
+[/ranger]
+@ranger = rw
+
+[/rave]
+@attic-pmc = rw
+
+[/reef]
+@reef = rw
+
+[/river]
+@river = rw
+
+# Moved to git
+[/roller]
+* = r
+
+[/roller/cmssite]
+@roller = rw
+
+[/samza]
+@samza = rw
+
+[/santuario]
+@santuario = rw
+
+[/sentry]
+@sentry = rw
+
+[/serf]
+@committers = rw
+
+[/servicemix]
+@servicemix=rw
+
+[/servicemix/maven/plugins]
+* = r
+
+[/servicemix/sandbox]
+@committers  = rw
+
+[/servicemix/smx4/bundles]
+* = r
+
+[/servicemix/smx4/specs]
+* = r
+
+[/servicemix/smx5]
+* = r
+
+[/shale]
+* = r
+
+[/shale/sandbox]
+* = r
+
+[/shindig]
+* = r
+
+[/shiro]
+* = r
+
+[/shiro/board]
+@shiro = rw
+
+[/shiro/site]
+@shiro = rw
+
+[/sis]
+@sis-pmc = rw
+
+[/sis/site]
+@sis = rw
+
+[/sling]
+* = r
+# temp allow these to clean up tags
+rombert = rw
+bdelacretaz = rw
+olli = rw
+
+[/spamassassin]
+@spamassassin = rw
+
+[/spamassassin/tags]
+@spamassassin = rw
+spamassassin_role = rw
+
+[/spamassassin/dns]
+@spamassassin = rw
+spamassassin_role = rw
+
+[/spamassassin/trunk/rules]
+@spamassassin = rw
+spamassassin_role = rw
+
+[/spamassassin/trunk/rulesrc]
+@spamassassin = rw
+spamassassin_role = rw
+
+[/spark]
+@spark = r
+
+[/sqoop]
+@sqoop = r
+
+[/sqoop/site]
+@sqoop = rw
+# sqoop is RO because the main repo has migrated to git
+# sqoop site is rw because svn is needed for CMS, and thus
+# is the only portion of the svn repo needed to remain writable.
+
+[/stanbol]
+@stanbol=rw
+
+[/stdcxx]
+* = r
+
+[/steve]
+@steve = rw
+
+[/storm]
+@storm = rw
+
+[/stratos]
+@attic-pmc = rw
+
+[/struts]
+@struts = rw
+
+[/struts/archive]
+@struts = rw
+
+[/struts/struts-annotations]
+* = r
+
+[/struts/struts-master]
+* = r
+
+[/subversion]
+@committers = rw
+svn-role = rw
+
+[/synapse]
+@synapse = rw
+
+[/syncope]
+@syncope = rw
+
+[/syncope/site]
+@syncope = rw
+
+[/tajo]
+@tajo= rw
+
+[/tapestry]
+#@tapestry = rw
+
+[/tapestry/tapestry-site]
+@tapestry = rw
+
+[/tcl/rivet]
+* = r
+
+[/tcl]
+@tcl = rw
+
+[/incubator/tephra]
+@tephra = rw
+@incubator = rw
+
+[/tez]
+* = r
+@svnadmins = rw
+
+[/tez/site]
+@tez = rw
+
+[/thrift]
+@thrift = r
+@svnadmins=rw
+
+[/thrift/cms-site]
+@thrift = rw
+
+[/thrift/site]
+@thrift = rw
+
+[/tika]
+* = r
+
+[/tika/site]
+@tika = rw
+
+[/tiles]
+@attic-pmc=rw
+
+[/tomcat]
+@tomcat = rw
+
+[/tomee]
+@tomee = rw
+@tomee-pmc=rw
+
+[/trafficserver]
+@trafficserver = rw
+
+[/trafficserver/site]
+@trafficserver = rw
+
+[/turbine]
+@turbine = rw
+
+#moved to gitbox INFRA-16437
+[/turbine/maven/archetypes]
+* = r
+
+[/tuscany]
+@attic-pmc = rw
+
+[/tuscany/collaboration]
+@attic-pmc  = rw
+
+[/twill]
+@twill = rw
+
+[/uima]
+@uima = rw
+
+[/uima/uimafit]
+* = r
+
+[/uima/uv3/uimafit-v3]
+* = r
+
+[/unomi]
+@unomi = rw
+
+[/usergrid]
+@usergrid = rw
+
+[/vcl]
+* = r
+
+[/vcl/site]
+@vcl = rw
+
+[/velocity]
+@velocity = rw
+
+[/vxquery]
+* = r
+@svnadmins = rw
+
+[/vxquery/site]
+@vxquery = rw
+
+[/webservices]
+@ws = rw
+
+[/webservices/muse]
+* = r
+
+# Temporary
+[/webservices/site]
+@ws = rw
+
+[/whirr]
+@attic-pmc = rw
+
+[/whirr/site]
+@attic-pmc = rw
+
+[/wicket/common]
+@wicket = rw
+
+[/wink]
+@attic-pmc=rw
+
+[/wookie]
+@attic-pmc = rw
+
+[/xalan]
+@xalan = rw
+
+[/xerces]
+@xerces = rw
+
+[/xerces/java]
+@xerces-j = rw
+
+[/xerces/xerces-p]
+@xerces-p = rw
+
+[/xml]
+@attic-pmc = rw
+
+[/xmlbeans]
+@poi = rw
+
+[/xmlgraphics]
+@xmlgraphics-pmc = rw
+
+[/xmlgraphics/batik]
+@xmlgraphics-batik = rw
+@xmlgraphics-pmc = rw
+
+[/xmlgraphics/commons]
+@xmlgraphics-batik = rw
+@xmlgraphics-fop = rw
+
+[/xmlgraphics/fop]
+@xmlgraphics-fop = rw
+@xmlgraphics-pmc = rw
+
+[/xmlgraphics/fop-pdf-images]
+@xmlgraphics-fop = rw
+@xmlgraphics-pmc = rw
+
+[/xmlgraphics/site]
+@xmlgraphics-batik = rw
+@xmlgraphics-fop = rw
+
+[/zookeeper]
+@zookeeper = r
+
+[/zookeeper/site]
+@zookeeper = rw
+
+[/~~~]
+# No-op section to act as sentinel for tlpreq/scripts/svnmv

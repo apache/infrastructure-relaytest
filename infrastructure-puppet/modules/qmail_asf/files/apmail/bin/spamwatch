@@ -1,0 +1,215 @@
+#!/usr/bin/perl
+#
+# yet another script to put in aliasempty.  This one will match spam
+# against a series of patterns.  If a pattern matches, return a 99
+# (which tells qmail to stop processing the delivery), but if there's no
+# match, then exit 0 so qmail continues on to other parts of the delivery.
+#
+# PLEASE PLEASE PLEASE if you make changes to this script, include a
+# copy of the relevant spam in the body of the commit message - some
+# sort of evidence or reason why it was added.
+
+$recip = $ENV{RECIPIENT};
+
+while (<STDIN>) {
+
+    $msg .= $_;
+    # break coz we only want to look at headers for now.
+    last if (/^\s*$/);
+
+    # look for patterns we can just DROP all messages from
+    if (
+	/^X-Mailer: The Bat! \(v1\.52f\) Business/o ||
+	/^Subject: Re: Details$/o ||
+	/^Subject: \*\*\*\*\*SPAM\*\*\*\*\*/o ||
+	/^Subject: \[Maybe Spam\]/io ||
+# messages with international subject lines.  Sigh.
+	/^Subject: ((re|aw|res|fw):?\s?)*=\?(GB2312|HZ-GB-2312|BIG5|euc_kr|euc-kr|iso-2022-kr|ks_c_5601-1987|iso-2022-jp)\?(B|Q)\?/io
+	) {
+	$bad = $_;
+	print "dev-nulling message to $recip, bad $bad";
+	exit 99;
+    }
+
+    if (/^From: [0-9]+\@(aol|compuserve|msn|netcom|juno|mci|hotmail|yahoo).com/io ||
+	/^Subject: ADV:/o ||
+	/^Subject: FREE /o ||
+	/^X-Advertisement/io ||
+	/^X-Mailer: Emailer Platinum/io ||
+	/^X-Mailer: NetMailer/io ||
+	/^X-Mailer: Caretop/io ||
+        /^X-Mailer: Hanmir Mailer/o ||
+	/^X-PMFLAGS:/io ||
+        /^X-PMG/o ||
+	/^Subject: .*That movie/o ||
+	/^Subject: .*Wicked screensaver/o ||
+	/^Subject: .*Your application/o ||
+	/^Subject: .*Your details/o ||
+	/^Subject: .*My details/o ||
+        /^Subject: .*Approved/o ||
+        /^Subject: Thank you!/o ||
+        /^Subject: .*free.*cell/io ||
+        /^Subject: .*DVD.*free/io ||
+        /^Subject: .*free.*DVD/io ||
+        /^Subject: .*bulk email/io ||
+	/^Subject: .*Copy ANY DVD MOVIE/io ||
+        /^Subject:.* toner/io ||
+        /^Subject: .*HGH/io ||
+	/^Subject: .*Fioricet/io ||
+        /^Subject: .*penis/io ||
+        /^Subject: .*stamina/io ||
+        /^Subject: opt-in/io ||
+	/^Message-ID: \<\>/ ||
+	/^X-Info: Filtered Via The Remove List/io ||
+	/^Subject: If Your Site Isn\'t In/io ||
+        /^Subject: .*Home Loan/o ||
+	/^Subject: Python Promotion!/o ||
+	/^Subject: .*          /o ||
+        /^Return-Path: <[^@]+>/o ||
+	/dvdcopysoft/o ||
+	/www.e-hostzz.(net|com)/io ||
+        /mb00.net/o ||
+	/buycarusa.com/o ||
+	/^Subject: LO MEJOR/o ||
+	/^Subject: .*Opt-In/o ||
+	/^Subject: .*Casino/io ||
+	/webmasterdirect/io ||
+        /^Subject: .*Call From Your Browser/o ||
+        /^Subject: e-City Direct/o ||
+        /^Subject: LOW RATES/o ||
+        /^Subject: .*viagra/io ||
+        /freestuffqueens/io ||
+        /bestselection/io ||
+	/Zurich Investment Group/io ||
+	/addresses\@worldnet.att.net/o ||
+        /Accessible Electronic Forms and Employment/o ||
+	/deal-maker.com/io ||
+        /paulsfunhouse.com/io ||
+	/donthitreply/o ||
+	/pleaseremove/o ||
+	/nevwest.com/o ||
+	/relay.comanche.com/io ||
+	/success\@nowhere.com/io ||
+	/^X-Mailer: SendMailEX/io ||
+	/^X-Mailer: Send CSV Mail/io ||
+	/^X-Mailer: IM200/io ||
+	/^X-Mailer: Oshirase-Mailer/io ||
+	/^X-Mailer: DM Mailer/io ||
+	/^X-Mailer: Achi-Kochi/io ||
+	/^X-Mailer: Direct Email/io ||
+        /THE PERFECT HOME BASED BUSINESS/io ||
+	/souvenirchina.com/io ||
+	/Free Sex/io ||
+	/free.*XXX/io ||
+	/XXX adult/io ||
+	/^From: .*lostvegas.com/io ||
+	/^From: no(body|reply)\@/io ||
+	/^To: friend\@/io ||
+        /^To: advertiser\@/io ||
+	/Bulk E-mail/io ||
+	/^Subject: .*make thousands monthly from home/io ||
+        /pm0.net/io ||
+	/^Comment: Authenticated sender is/io ||
+	/^To: [0-9]+\@(aol|compuserve|msn|netcom|juno).com/io ||
+        /This Message was Composed using Extractor Pro/io ||
+	/^To: .*\@public.com/i) {
+	$bad = $_;
+	print "Blackholing to $recip, bad $bad";
+	&dump_message($bad);
+	exit 99;
+    }
+}
+
+# these rules apply to the body
+
+while(<STDIN>) {
+    
+    $msg .= $_;
+
+# look for patterns we can just DROP all messages from
+
+    if(
+       /UEsDBAoAA/o ||
+# Klez
+       /TVqQAAMAAAAEAAAA\/\/8AALgAAAAAAAAAQ/o ||
+       /I send you this file in order to have your advice/o ||
+# bugbear, or something
+       /^UEsDBBQAAgAIA...........m0ABAABSAQALAAAAZGV0YWlscy5waWbssmOMLkzbrnl3r7Zt27Zt$/o ||
+       /Please see the attached file for details./o ||
+       /See the attached file for details/o ||
+       /For security purposes the attached +file +is +password protected/o ||
+       /^Content-Disposition: attachment; filename=patch.exe/o ||
+# these next two are the result of a worm 16/05/2004
+       /yahoomail-support\@yahoo-inc.com/o || 
+       /Da Sie vor einiger Zeit ihren APACHE-Tarif/o ||
+       /This is the file with the information that you ask for/o
+       ) {
+	$bad = $_;
+	print "dev-nulling message to $recip, bad $bad";
+	exit 99;
+    }
+
+# now, log these patterns to /var/log/blackholedspam.
+    if(
+       /\<\!--[a-z0-9]+--\>/o ||
+       /^\<HTML\>\<PRE\>/o ||
+       /iMozo.com/io ||
+       /Nigeria national petroleum/io ||
+       /EmailRewardz/io ||
+       /MIRIAM ABACHA/io ||
+       /MARYAM ABACHA/io ||
+       /Banque Internationale Afrique/io ||
+       /sese-seko/io ||
+       /out of Nigeria/io ||
+       /Adult Webmaster/io ||
+       /Adult Advertisement/io ||
+       /BULK EMAIL/o ||
+       /Our E-Mail Campaigns Produce Staggering Response Rates/io ||
+       /FREE CREDIT REPAIR CONSULTATION/io ||
+       /BENCHMARK SUPPLY/o ||
+       /If you don't want this type of information or e-mail/io ||
+       /Section 301/io ||
+       /We'll Submit Your Site To/io ||
+       /Cable Television Descrambler/o ||
+       /opt-inworld/o ||
+       /URGENT BUY/o ||
+       /INCREASE SALES/o ||
+       /Remove Your E-Mail from us/io ||
+       /GET THE MONEY YOU NEED RIGHT NOW/o ||
+       /the Opt-In America Mailing List/io ||
+       /Our research indicates that the following information is of interest to you/io ||
+       /in compliance of the new e-mail bill/io ||
+       /Under Bill s.1618 TITLE III /io ||
+       /PGh0bWw\+DQo/o ||
+       /EMAIL MARKETING WORKS/o ||
+       /remove.*SUBJECT/o ||
+       /HELP SOLVE YOUR MONEY PROBLEMS/o ||
+       /ARE YOU BEING INVESTIGATED/io ||
+       /\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$\$/o ||
+       /INTERNET  CASH/o ||
+       /Federal requirements for commercial email/io ||
+       /If you wish to be removed from future mailings/io ||
+       /This is a one.*time mailing/io 
+       ) {
+	$bad = $_;
+	print "Blackholing to $recip, bad $bad";
+	&dump_message($bad);
+	exit 99;
+    }
+}
+
+sub dump_message {
+    $bad = shift;
+    while (<STDIN>) {
+	$msg .= $_;
+    }
+    open(DUMP, ">>/var/log/blackholedspam");
+    $date = localtime(time);
+    print DUMP "\n\nFrom $ENV{'SENDER'} $date\n";
+    print DUMP "SPAMWATCH-To: $ENV{'RECIPIENT'}\n";
+    print DUMP "SPAMWATCH-Bad: $bad";
+    print DUMP $msg;
+    close(DUMP);
+}
+
+

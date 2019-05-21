@@ -1,0 +1,127 @@
+---
+classes:
+  - apache
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::rewrite
+  - buildbot_asf
+  - mysql_asf::backup
+  - mysql::server
+  - rsync::server
+  - ssl::name::wildcard_apache_org
+  - vhosts_asf::vhosts
+
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::timeout: 600
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '500'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '500'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '150'
+apache::mod::event::serverlimit: '10'
+apache::mod::event::startservers: '5'
+apache::mod::event::threadlimit: '500'
+apache::mod::event::threadsperchild: '50'
+
+apt::source:
+  trusty-archive:
+    comment: 'trusty archive for mysql 5.6'
+    location: 'http://archive.ubuntu.com/ubuntu'
+    release: 'trusty'
+    repos: 'universe'
+    ensure: present
+
+mysql_asf::backup::rsync_offsite: 'true'
+
+mysql::server::package_name: 'mysql-server-5.6'
+
+mysql::server::override_options:
+  mysqld:
+    ft_min_word_len: 2
+    bind-address: "%{::ipaddress_ens18}"
+    server-id: 1
+    binlog-format: 'mixed'
+    log_bin: '/var/log/mysql/mysql-bin.log'
+    innodb_flush_log_at_trx_commit: '1'
+    sync_binlog: '1'
+    binlog-ignore-db: 'mysql'
+    expire-logs-days: '5'
+    character-set-server: 'utf8'
+    max_allowed_packet: '64M'
+    max_connections: '4096'
+    skip_name_resolve: '1'
+  mysqldump:
+    max_allowed_packet: '64M'
+
+mysql::server::databases:
+  asfbuildbot:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+
+rsync::package_ensure:        'latest'
+rsync::server::use_xinetd:    false
+rsync::server::gid:           'nogroup'
+
+rsync::server::module:
+  master1:
+    path: '/x1/buildmaster/master1/'
+    hosts_allow: '209.188.14.147'
+    auth_users: 'apb-buildbot'
+    secrets_file: '/etc/rsyncd.secrets'
+    incoming_chmod: false
+    outgoing_chmod: false
+    read_only: 'no'
+
+rsync_asf::cron_hour: 10
+rsync_asf::cron_minute: 10
+
+rsync_asf::fslist:
+  - /x1/buildmaster/public_html
+
+file:
+  '/etc/rsyncd.secrets':
+    content: "%{base::rsync_secrets}"
+    owner: 'root'
+    group: 'root'
+    mode: '0600'
+
+vhosts_asf::vhosts::vhosts:
+  buildbot-vm-80:
+    vhost_name: '*'
+    priority: '12'
+    servername: 'buildbot-vm.apache.org'
+    serveraliases:
+      - 'ci.apache.org'
+    port: 80
+    ssl: false
+    docroot: '/var/www/html'
+    access_log_file: 'ci.apache.org.access.log'
+    error_log_file: 'ci.apache.org.error.log'
+    custom_fragment: |
+      RedirectMatch permanent ^/(.*)$ https://ci.apache.org/$1
+
+  buildbot-vm-443:
+     vhost_name: '*'
+     default_vhost: true
+     serveradmin: 'users@infra.apache.org'
+     servername: 'buildbot-vm.apache.org'
+     serveraliases:
+       - 'ci.apache.org'
+     port: 443
+     docroot: '/var/www/html'
+     access_log_file: 'ci.apache.org.access.log'
+     error_log_file: 'ci.apache.org.error.log'
+     ssl: true
+     ssl_cert: '/etc/ssl/certs/wildcard.apache.org.crt'
+     ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+     ssl_key: '/etc/ssl/private/wildcard.apache.org.key'
+     custom_fragment: |
+       RewriteEngine On
+       RewriteRule "/projects/flink/flink-docs-release-(0.[4-9](.+)?|0.10)/?(.*)"  "/projects/flink/flink-docs-stable/"  [R]
+       ProxyPass / http://127.0.0.1:8080/
+       ProxyPassReverse / http://127.0.0.1:8080/

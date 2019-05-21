@@ -1,0 +1,397 @@
+---
+classes:
+  - asf999::create_user
+  - base
+  - base::snmp::createv3users
+  - customfact
+  - ldapclient
+  - ntp
+  - pam
+  - puppet_asf
+  - ssh_asf # this pulls in both server and client by default
+  - sudoers
+  - snmp
+  - timezone
+  - ulimit_asf
+
+classes_windows:
+  - asf999_windows::create_user
+  - customfact
+  - datadog_agent
+
+## MODULES
+## AMANDA
+amanda::client::remote_user: 'amandabackup'
+amanda::client::server: 'ec2-54-191-28-247.us-west-2.compute.amazonaws.com'
+
+## ASF999
+asf999::create_user::keycontent: |
+
+  # humbedooh
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDKU0OarYDnMtEyneHtOAA/mpeJbXLCVA2yy8wl2fGQ/kzdRhBDCCjusV0D83cwKckJEGVInbYruLwq7Rk4e1k0hwHoVR28ps4B0IrsFlkQrfkS0plGq5VlbUU1lu9hdR+2o992NzK3BGJa6Bde493FaEnJf+s4dQM9kkb9keYXLdh9lC99xlxYg7P5gSlv+0tCAo3LisKM1vVfjLaXIv94KwRNjcrLH0rjrQt0UnkGTjoP+WonILz9CsFfJDncofFp4gyyioYDTqgyGbVauGAdfctrqc+c1x4sz+Hk2ocFjGZEGzHZ8E/ZRXpaa9QNeyc4vKAm9CSWyonLNr3+KyJfQP82w5IZIF8rMBjl3/m0zPUgXSitc6ebrLUFhrESyoFF0RfeqEYUzjf52uRVlPVSiSATmvccdHel/G6lUZrQScYUPOZT++C7TZNPzRNy/MzeLjF0jcrDYjCXEj1r9TkQtByoHKc0Cikokcmn15SPX9nBWScN0kQ9DCnQ1DRx0C2L/KJwiV8i/ziel8RFqg8n71v1H8Ve40F/m+03dZAUGzlE1wu+lXu/ZXjBgIu8vOmz3LK+k4UskiMiiktYq1N9RG+4l30JR/OlLIRhlKiernmWUFyGC4npbquaTKUsB6G6RKOC1WnLpuM5U1jIKVeOejoptJilaHvO0RiZxNP/ZQ== humbedooh-puppet-20130726
+
+  # gmcdonald
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC71HP9YspO1SDZ/5qNJNGE3MW27XiYc5gx2kaCJ2ZT3unZVRU60p3/fbMG5XwOzvmbN3Gzp2l2/8jKmngnQO0oHY9E2ZcVh14TblbgSErVPMM5zZBg40PvDRk61eECnGkXYfVKU5RzcDq5yYr4FFFFRh3pWjjBDBWtSczAXYavWPHOpNpQ1onudiCev/KHADXZS8J/HwhHmkVmxSWX+9upQlPlokXulZpMFqx6FPbBLk45Miq5xSYS3mN8dW3OupDHiKavKoLuzqom+7ndLhFUMX468htnhfUvTs9ajh7xBTfhziPJh+PkjeQLWNLdMQe0L8Ptd4IAxqSkegTCNit/LZbK/Jo6z7sBSdk2N+f8UIlK2do/9KlN30sFbVAK3nsIekxR+xQldEOMaCr83IM/b0G/mefxFrCdSm3z9SW84WKVt+DNADVKUMTm9ngOp2cjxPeXQuL5vTABaeSrzeMTAWagWTRQQVT/6XMNNJRbpHj+Fp8rd4sIRnqv86hYL1aoE1THuxqT451ZRYHJoCiZ3PQPMEhAzR5F6Voji6RkyJL8S662Ai/FesEeNyc2hcErfnfFCsKWckUOg8YOIR+DSfuJ6LtZZB/+SAE/QzKzIvMWuLCiGFR2oSiY7MqeJCm5CeF06YGddnQhGoqM6ZC6/hFkWAJ0Uzc5DRlxyFovaQ== gav_mac
+
+  # markt
+  ssh-dss AAAAB3NzaC1kc3MAAACAVaMrsS2AKvOFn4RZjBWxrwF3NxJ6jvy3ZJhbd+LH/JigL1J6o26Z5AV8HsfhOuVqj6kPaIAJ3bwaMjHrzl4nkFDS3QXDD3psrZbMtqIaugwzNOY7WDsHF0sfr6A/PoktNkoXF/BPqByx9DJ7UKq2+MP9LTj9r7Nzb5nS5L+dwDUAAAAVAI6xcksdw9IsgHW8LUeWSS+pGeXzAAAAgDhIVTB7UgFhX8Qjm/IdKVvR6hjYJ04HQnTqsnDzM2ju/Di4ATpogsUunnI7ZsBgOPF/moAzBlK+r+4621ggAW1xfRysvJYtqS0IYmyLPWryIb2xK4i6bagYhjtD2YAJbFuYmZHfyCUf82MVgqPeRRn9BWzCVzvA+7+K1rj5RlvUAAAAgBWbDECq37AFDQuMHRJiTAYJQLVBtfx3Fr/XbgkcX7DMPLXooDIAJWpqtyyfxYRHC4KRKmzDWE97Cw/03DpthAgpB+svxJghh895oAtoaCxhVzUrV0HUKQlNvg9a8s83w/iiHmoURB8kPZGyW1WJPS4ezsj/62WK1LXjmJK81pvf
+
+  # cml
+  ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAn5MYIbWTJB6ni69vgMUJXqexctL5KTG9yAP6nfas2Akdu6GAO0fL1cCGq/TV/0LKWM/XeSkdZMo1LxqsmJZpp9BvcDYEmUhR31N+eQE1SPf8qrtFJFAN1GbmMxYwiYbAO+4zjJu+YLV0zUeSMZX56pCpbd4kaDLgY8rXzUbo934e2s5AdKHUKh65gzMwP9gzyeq02/jEfET2VSN7Xz0mqxbF47+81beQZuxySfO1M68mFLQavSt6J/E90M9ljy/oylGTTUnmZlmcxk4smuN2V8YzZsJHkGB9bh0bK5xHqci9QRmSA4nxprNL6bqpnUHtYtNQsvPrTlyEFD28qePQEQ== cml
+
+  # ke4qqq
+  ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAtqqDXzCNpuQvr3yJa1XbhHDTW/hRwGMZCbninWxwWsd/E7QkuCdstBT2iGihbizbZlnh0mchjtvhouIADkbCyizvtRdujl0Vi1pg5i6YOKKkFc5/s2BRoqsrj0FLu7d2/oHddOz2DO1B8nfGfVyC9mxcqKVpOaGqfdcalLrAH60e7MmH9FkrEVMHQIgGaq1J9W0FFczcxrsCEu5FxXaFTGEos1BmnnsrdtCmQhSJ2n41cngZxrj+yy/HJSj++aDJ2HCwyvRnOX6PX7iNtLyRDX947+A4VbCRQtAC7IbccKHvTGTHSzBXs6PUNUEleZi5VHA6Xm4ubVNiNLwmGYlthw== ke4qqq@nalleyt61.keymark.dom
+
+  # christ
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDJivoCwPuWBhdeg/e/OcmfRkDLX3DTJPdiRJd3XbHP4QP+yjDeBqq57O956UEk1qoG/JGQx3vOXk96oSTFKpOJcZopZ2Dg1lJAWWccKompkrUGP0R8lb8Ki9VWf1TujNagDuDzxt9jruwW5jEeG1iOhgu0J0Qufd1up6Q5yvBE5dohpZ2OOhZennIudWOXqRduUVuNR6J5umfRVSPbg1bJXjjvwC5aeNGCJdH/NEp71+n7YjSfavoHbG8y3B3OvwJq3xQMqW5LZz0oxfpriIbBITzG8LO09TNnPLXc+CqGuMyqFHcv7KhhtQiA6oTom/9/Ylsg1HVmGxS/ARMW53czld8iVMFFdGGAs4Y3tV9glokG8JTaekYLTQoTJH41ZtF8gDXpabxrsfUQUDuETlpMJ+21U1xnwahMaMQzNL5+Kq2/KOc+qmLzrk4KY3Om3svKSs/v5nd3KHE5sDaL0A69l6wqIFzKiPTUSHew8wG1+BouRWJQ2NDow0F/QUpUKlXRC2zwQgn4Ha939EiQX1l2zDeGcBY+ohDHbgRZWhsXR8g7MSKKPQfQ16DBOkEzhQ6ztmTs2u/43olUEwjKjyVQXhbA5uI26eZyFYv5QBM7xwXpmbX8BTNqHhl02kIJGn2uSPYD9IpeAkRkt7INf60UUKOuIP2F3BTvFnhDnrdMIQ== christ@ECTO1
+
+  #johna
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzUgTge2PEY2m4AnEVXMzpkFY75+B6mMQVQYf572MK7mbT+HoD51qpmrbgXmNVSD4pRTOrmu+MJEKActdSnwMQX/oRkVTQ4gmF+w3MkekIAbd4KpshfofF/rff7W159tnwbOdsAw5WrGegFcw/JEnnG7fRsNQxspY6S4XggNHhyYFZyCkPy6UffAfPdVY5S8mz1rKQ+jdz4Iobl7+cdojsrt+MWqDSHF0mOR/h5E72S9KEaR18tOkQqJdUUqCz/e5AkAmcn38TAKsSPtI66rgS7S2BDosNvJU2YzDwygKiz6GxHbUaTx3haWlmVU0mqEGk29p4YDCjnoi+SMTszeDT john@john-Latitude-E7470
+
+  #dfoulks
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDr8lZ/ACqhAQjZIsZJy/WswWW4hmlwEG7kr3t4+NCMj/8CI4AaLTTZJpOVW5u52gvJnEsMnp2ZLqZhaeWSa/m6SnNlzKqqe16DXP7ngq56qD8KjTnxnb5HNrqYiJJhLXpmd/fm89yOq8k4Tv4bOQzL0bgCA6xBxWFuZ8TPaUCNcXxidLqe2W8gQx4AffhFjrPdQPKnhVQ8pcC5dlpi17cBKHCTSdVM0wT7pLGMULTVbD25yHPtCI/jp47AGKE9IMYYxDlFVnePtWU19lRqjn4gjsv3dVYUhCibXyrz6RAxCZwXhK+5Et4uPcdttMO56wyxXC3lijTETvQX2rIkc4WX warwalrux@warwalrux-XPS-15-9570
+
+
+asf999::create_user::sshdkeysdir: '/etc/ssh/ssh_keys'
+asf999::create_user::user: 'asf999'
+
+datadog_agent::tags:
+  - 'puppet_version:%{puppetversion}'
+  - 'dc:%{dd_autotag_colo}'
+  - 'external_ip:%{external_ip}'
+  - 'ubuntu_version:%{asfosrelease}'
+
+fail2ban::disable: false
+fail2ban::ignoreip:
+  - '127.0.0.1'
+  - '140.211.11.0/24'
+  - '10.41.0.6'
+  - '160.45.251.2'
+fail2ban::jails_config: 'concat'
+fail2ban::puppi: 'false'
+fail2ban::monitor: 'false'
+fail2ban::mailto: 'root@apache.org'
+fail2ban::bantime: 604800
+fail2ban::findtime: 3600
+fail2ban::maxretry: 3
+fail2ban::service_autorestart: true
+fail2ban::source_dir: 'puppet:///modules/fail2ban_asf/fail2ban/conf'
+fail2ban::source_dir_purge: true
+
+# GITSERVER_ASF
+gitserver_asf::packages:
+  - 'gitweb'
+  - 'libjson-perl'
+  - 'libdigest-hmac-perl'
+  - 'liblwp-useragent-determined-perl'
+  - 'python-tblib'
+
+## LDAPCLIENT
+ldapclient::ldapcert: |
+  -----BEGIN CERTIFICATE-----
+  MIIE7jCCA9agAwIBAgIJAKVPvcTSmTbFMA0GCSqGSIb3DQEBBQUAMIGqMQswCQYD
+  VQQGEwJVUzERMA8GA1UECBMITWFyeWxhbmQxFTATBgNVBAcTDEZvcnJlc3QgSGls
+  bDEjMCEGA1UEChMaQXBhY2hlIFNvZnR3YXJlIEZvdW5kYXRpb24xFzAVBgNVBAsT
+  DkluZnJhc3RydWN0dXJlMRMwEQYDVQQDEwphcGFjaGUub3JnMR4wHAYJKoZIhvcN
+  AQkBFg9yb290QGFwYWNoZS5vcmcwHhcNMTQwNDAzMTcwNzMxWhcNMjQwMzMxMTcw
+  NzMxWjCBqjELMAkGA1UEBhMCVVMxETAPBgNVBAgTCE1hcnlsYW5kMRUwEwYDVQQH
+  EwxGb3JyZXN0IEhpbGwxIzAhBgNVBAoTGkFwYWNoZSBTb2Z0d2FyZSBGb3VuZGF0
+  aW9uMRcwFQYDVQQLEw5JbmZyYXN0cnVjdHVyZTETMBEGA1UEAxMKYXBhY2hlLm9y
+  ZzEeMBwGCSqGSIb3DQEJARYPcm9vdEBhcGFjaGUub3JnMIIBIjANBgkqhkiG9w0B
+  AQEFAAOCAQ8AMIIBCgKCAQEAxb2CT2ZhJFYifDAloSpIV2vGoys280UsDvz77sTO
+  AcdAyuNHH7uwfVQMc68IXunB2KP0XL1r0Ur9Opm0E8RjFW2P9qquDDcgX8Noghv+
+  q5gxWeOePFqe9BsQov6Xr42SUT1YSQ3/2g3j1jTOCzNy7/XszLuI4BJLu6/R+VX+
+  e7YczTeednj4mU/KGJbzrTj+VdQW8ZPsPdlvCFp9NO9v00rKt3A/7XuyYBJwlgvD
+  3r6J8M7UkCuIuLwEQxKeINso853Ucpvd42xfuUiBV4ahEOyEblT5YPL7n1V5BxD/
+  qhAV7neq9pVz0to9HF1GjafK/k5tUiTFx3XbBzHgRa7z/wIDAQABo4IBEzCCAQ8w
+  HQYDVR0OBBYEFI669DBJxSoUJihXSlQK7VDUnsPKMIHfBgNVHSMEgdcwgdSAFI66
+  9DBJxSoUJihXSlQK7VDUnsPKoYGwpIGtMIGqMQswCQYDVQQGEwJVUzERMA8GA1UE
+  CBMITWFyeWxhbmQxFTATBgNVBAcTDEZvcnJlc3QgSGlsbDEjMCEGA1UEChMaQXBh
+  Y2hlIFNvZnR3YXJlIEZvdW5kYXRpb24xFzAVBgNVBAsTDkluZnJhc3RydWN0dXJl
+  MRMwEQYDVQQDEwphcGFjaGUub3JnMR4wHAYJKoZIhvcNAQkBFg9yb290QGFwYWNo
+  ZS5vcmeCCQClT73E0pk2xTAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUAA4IB
+  AQAI7HP4tVEj8DZ1fiKH947RsRuC12H4mIeO6H9P15rFp9AkDgZxIGjoGW13yGhn
+  p/4jDNZWwitCoj4ztDCrMjb9v5xuHhOB/Ny5N4eByEPpiZ3z/626XDHSjfc36F0Y
+  ey2ghZN7EU0eG3q9GPjDDXjefEyieN8p6QjBCeTOGAF25pX/8AxNO/Znk2D4LGGm
+  S1GpVMgMmwfXR4lncdwpRnpu/k2z079SROSmuFnwsMtGOeBA/1tGXBF/5LuLpKyk
+  1BXsdDCBgYk+eXh4gG/GJaI/IvDyAp81cF2oFbqQY1fc8heMHhQ1667EOqRrqe/k
+  P6Hk8NQdShbeE0/nDvYchhV5
+  -----END CERTIFICATE-----
+
+ldapclient::authorizedkeysfolder: '/etc/ssh/bin'
+ldapclient::authorizedkeysfile: 'asf-ldap-sshkeys.sh'
+ldapclient::nssbinddn: 'cn=nss_ldap,ou=users,ou=services,dc=apache,dc=org'
+
+ldapserver::slapd_peers:
+  5: ldap1-ec2-va.apache.org
+  6: ldap1-il-eu.apache.org
+  7: ldap2-lw-us.apache.org
+
+ldapserver::schemas:
+  - core
+  - cosine
+  - nis
+  - inetorgperson
+  - misc
+  - openldap
+  - openssh-lpk
+  - ppolicy
+  - asf-custom
+ldapserver::ldaploglevel: 'sync'
+ldapserver::modulepath: '/usr/lib/ldap'
+ldapserver::modules:
+  - back_mdb
+  - syncprov
+  - memberof
+  - accesslog
+ldapserver::sizelimit: 'unlimited'
+ldapserver::backend: 'mdb'
+ldapserver::database: 'mdb'
+ldapserver::suffix: 'dc=apache,dc=org'
+ldapserver::directory: '/var/lib/ldap'
+ldapserver::rootdn: 'cn=root,dc=apache,dc=org' # The rootdn passwd should be in the eyaml file
+ldapserver::maxsize: '1024000000'  # Max MDB DB size
+ldapserver::indexes:
+  - objectClass
+  - cn
+  - givenName
+  - homeDirectory
+  - mail
+  - sn
+  - uid
+  - asf-pgpKeyFingerprint
+  - asf-altEmail
+  - memberUid
+  - uidNumber
+  - gidNumber
+  - entryUUID
+  - member
+  - uniqueMember
+
+ldapserver::cafile: '/etc/ldap/cacerts/cacert.pem'
+ldapserver::certfile: '/etc/ldap/cacerts/ldap-wildcard-cert.pem'
+ldapserver::keyfile: '/etc/ldap/cacerts/ldap-wildcard-cert.key'
+
+mail_relay::mail_ldap_servers: 'ldaps://ldap-us-ro.apache.org ldaps://ldap-eu-ro.apache.org'
+
+ntp::disable_monitor: true
+ntp::udlc: false
+ntp::servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org
+  - 2.pool.ntp.org
+  - 3.pool.ntp.org
+ntp::restrict:
+  - '127.0.0.1'
+  - '::1'
+  - '-4 default kod notrap nomodify nopeer noquery'
+  - '-6 default kod notrap nomodify nopeer noquery'
+
+
+## POSTFIX
+postfix::params::service_restart: '/etc/init.d/postfix check && /etc/init.d/postfix restart'
+postfix::server::relayhost: '[mail.apache.org]:2025'
+
+
+puppet_asf::enable_daemon: true
+
+## SNMP
+snmp::agentaddress: 'udp:*:161'
+snmp::com2sec:
+  - "snmp-monitor 127.0.0.1 asfro"
+  - "snmp-monitor 62.210.60.242 asfro"
+snmp::groups:
+  - "snmp-monitor v2c snmp-monitor"
+snmp::views:
+  - "all included .1"
+snmp::accesses:
+  - 'snmp-monitor "" any noauth exact all none all'
+snmp::snmpd_config:
+  - 'rouser monitor authNoPriv'
+  - 'smuxpeer .1.3.6.1.4.1.674.10892.1'
+  - 'disk / 10000'
+  - 'disk /var 5%'
+  - 'includeAllDisks 10%'
+  - 'perl do "/root/bin/zpool.pl"'
+
+## SpamAssassin
+spamassassin::spamd::required_hits: '10' #Scores over this value with tagged as spam.
+spamassassin::spamd::custom_scoring:
+  ALL_SORTED:
+    name:             'ALL_SORTED'
+    score:            '-2000.0'
+  DRUGS_MUSCLE:
+    name:             'DRUGS_MUSCLE'
+    score:            '4.0'
+  URIBL_SBL:
+    name:             'URIBL_SBL'
+    score:            '4.0'
+  URIBL_SBL_SURBL:
+    name:             'URIBL_WS_SURBL'
+    score:            '4.0'
+  RCVD_IN_BL_SPAMCOP_NET:
+    name:             'RCVD_IN_BL_SPAMCOP_NET'
+    score:            '2.0'
+  RCVD_IN_XBL:
+    name:             'RCVD_IN_XBL'
+    score:            '4.0'
+  RCVD_IN_PBL:
+    name:             'RCVD_IN_PBL'
+    score:            '0.0'
+  RCVD_IN_RP_RNBL:
+    name:             'RCVD_IN_RP_RNBL'
+    score:            '0.0'
+  RDNS_NONE:
+    name:             'RDNS_NONE'
+    score:            '3.0'
+  HTML_MESSAGE:
+    name:             'HTML_MESSAGE'
+    score:            '2.0'
+  EXTRA_MPART_TYPE:
+    name:             'EXTRA_MPART_TYPE'
+    score:            '3.5'
+  MIME_HTML_ONLY:
+    name:             'MIME_HTML_ONLY'
+    score:            '3.0'
+  URIBL_BLACK:
+    name:             'URIBL_BLACK'
+    score:            '4.0'
+  DCC_CHECK:
+    name:             'DCC_CHECK'
+    score:            '0.25'
+  HELO_DYNAMIC_SPLIT_IP:
+    name:             'HELO_DYNAMIC_SPLIT_IP'
+    score:            '0.0'
+  FM_FAKE_HELO_VERIZON:
+    name:             'FM_FAKE_HELO_VERIZON'
+    score:            '0.0'
+  FORGED_MUA_OIMO:
+    name:             'FORGED_MUA_OIMO'
+    score:            '0.0'
+  TVD_SPACED_SUBJECT_WORD3:
+    name:             'TVD_SPACED_SUBJECT_WORD3'
+    score:            '0.0'
+  TVD_SPACE_RATIO:
+    name:             'TVD_SPACE_RATIO'
+    score:            '0.0'
+  FORGED_MUA_OUTLOOK:
+    name:             'FORGED_MUA_OUTLOOK'
+    score:            '0.0'
+  WHOIS_CONTACTPRIV:
+    name:             'WHOIS_CONTACTPRIV'
+    score:            '0.0'
+  FREEMAIL_FROM:
+    name:             'FREEMAIL_FROM'
+    score:            '0.0'
+  FREEMAIL_REPLYTO:
+    name:             'FREEMAIL_REPLYTO'
+    score:            '0.0'
+  FREEMAIL_FORGED_REPLYTO:
+    name:             'FREEMAIL_FORGED_REPLYTO'
+    score:            '0.0'
+  FSL_FREEMAIL_1:
+    name:             'FSL_FREEMAIL_1'
+    score:            '0.0'
+  FSL_FREEMAIL_2:
+    name:             'FSL_FREEMAIL_2'
+    score:            '0.0'
+  FH_DATE_PAST_20XX:
+    name:             'FH_DATE_PAST_20XX'
+    score:            '0.0'
+  FRT_ADOBE2:
+    name:             'FRT_ADOBE2'
+    score:            '0.0'
+
+spamassassin::spamd::minspare: '1'
+spamassassin::spamd::mincheldren: '5'
+spamassassin::spamd::maxspare: '10'
+spamassassin::spamd::maxconnsperchild: '1000'
+spamassassin::spamd::maxchildren: '40'
+spamassassin::spamd::use_pyzor: true
+spamassassin::spamd::package_list:
+  - 'amavisd-new'
+  - 'clamav-daemon'
+  - 'clamsmtp'
+  - 'opendkim'
+  - 'spamassassin'
+  ## Install some perl libs for spamassassin
+  - 'libgeo-ip-perl'
+  - 'libio-socket-ip-perl'
+  - 'libdbi-perl'
+  - 'libencode-detect-perl'
+  - 'libnet-patricia-perl'
+  ## Below is a list of packages used by clamav and friends to scan contents
+  - 'arj'
+  - 'cabextract'
+  - 'cpio'
+  - 'nomarch'
+  - 'pax'
+  - 'rar'
+  - 'unrar'
+  - 'unzip'
+  - 'zip'
+
+spamassassin::spamd::whitelist_from:
+  - 'report@meltwater.com'
+  - 'isporders@symantec.com'
+  - 'carledi@ar.ibm.com'
+  - 'altmann@us.ibm.com'
+  - 'jira@apache.org'
+  - 'bounces*=apache.org@*.coverity.com'
+
+spamassassin::spamd::whitelist_to:
+  - '*-reject-*@apache.org'
+  - '*-accept-*@apache.org'
+  - '*-reject-*@*.apache.org'
+  - '*-accept-*@*.apache.org'
+  - 'planners@apachecon.com'
+
+spamassassin::spamc::spamd_peers:
+  - 'spamd1-us-west 10.40.0.7'
+  - 'spamd2-us-west 10.40.0.9'
+  - 'spamd3-us-west 10.40.0.10'
+  - 'spamd4-us-west 10.40.0.11'
+spamassassin::spamc::haproxy_mode: 'tcp'
+spamassassin::spamc::haproxy_port: '10024'
+spamassassin::spamc::haproxy_maxconns: '5000'
+
+
+## SSH
+ssh::client_options:
+    'Host *':
+        SendEnv: 'LANG LC_*'
+        ForwardX11Trusted: 'no'
+        ServerAliveInterval: '10'
+    UseRoaming: 'no'
+
+ssh::params::sshd_keysdir: '/etc/ssh/ssh_keys'
+
+ssh_asf::server_options:
+    Protocol: '2'
+    ListenAddress: '0.0.0.0'
+    PasswordAuthentication: 'no'
+    SyslogFacility: 'AUTHPRIV'
+    UsePAM: 'yes'
+    X11Forwarding: 'no'
+    AuthorizedKeysCommand: '/etc/ssh/bin/asf-ldap-sshkeys.sh'
+    AuthorizedKeysFile: '/etc/ssh/ssh_keys/%u.pub'
+
+timezone::timezone: 'Etc/UTC'
+timezone::hw_utc: true
+
+ulimit::rule:
+  all-hard-nofile:
+    ulimit_domain: '*'
+    ulimit_type: 'hard'
+    ulimit_item: 'nofile'
+    ulimit_value: '1048576'
+  all-soft-nofile:
+    ulimit_domain: '*'
+    ulimit_type: 'soft'
+    ulimit_item: 'nofile'
+    ulimit_value: '1048576'
+
+zmanda_asf::amdump_public_key: |
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDjURV0FXxmTqc40G7FAcXf3RVvpwPlbzRi4SIFq9abHz5qE1s0vEtO2NNc82yZ8REVhbYyHsIPuG/Cgm8W3iKLQKaQz+7rSO9gQ1m7JqxSRHBW1Aw7zDZ5boKfpP8Ll3dOCfP6H3HW855t05UtY6fCo8Ie+F9HBxbwhdfrjT4/EpjpFkEkze3PzkosH2k1NdX8Q4mg7eE7sclOGinAHbL5HtUGw/V/oFgRbrxl46CVgUr+QTEbWrr8QHqm5FIe8XoJPExQjrRYleo+TLPj29Fdv/HTtGKI0+LwDyjcJ7Rxjs8UKZfGn3CHgv1sDTAmvqrRy1oU2HrOSJZCzJDGdPr9
+zmanda_asf::amrecover_public_key: |
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDriyi/A1uPNoaZg7fcKzR0kvN0IKDovP509nY4CtFP0762wGr3/SOcj8io5DHsyAJ86/M0KGP7OrUCbhS3OI2oOrP+j/MFrzlW8Lh4goEvywhoOz63X7K35tsEhLkJTPIDvxFGSVatcSLMRy3fc+5NxuE0t/PLy+shATrSVVDmQoVI/S/HKCYV7sIgl97aV+87Fs8Gm8pQG+EEgSerg9woonwoQd4vBZjvSW5z4lNVfLNu484KfhIF7aAvqAugHWELiSdQ5aJ1rTJEmOI6F4FYwXg9dxgugoWvSpbgDgm+O0hm635/bFeBACSll8B7MB0p3KzZ7Hpyix5SGuIRVuxr

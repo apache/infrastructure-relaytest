@@ -1,0 +1,62 @@
+ <!DOCTYPE HTML>
+<html>
+<head>
+<meta charset="utf8">
+<link rel="shortcut icon" href="/favicon.ico">
+<title>ASF Writable Git Services!</title>
+
+    <link rel="stylesheet" href="css/foundation.min.css">
+</head>
+<body>
+    
+<div style="text-align: center;">
+    <p>
+    <a href='/'><img src='https://www.apache.org/img/asf_logo.png' style='padding-top: 5px;'/></a>
+    </p>
+    <h2>ASF Writable Git Services</h2>
+<p>This service, <code>gitbox.apache.org</code>, provides Apache projects with a two-master setup of git repositories, allowing committers to utilize two different avenues of committing code to the Apache Software Foundation; through GitHub or through the ASF. All repositories present on gitbox are available on GitHub with write-access enabled, including rights to open/close/merge pull requests and address issues. </p>
+<p>Projects wishing to move their repositories from either git-wip-us.apache.org or svn.apache.org may do so by filing a  <a href="https://issues.apache.org/jira/browse/INFRA">JIRA ticket</a>  with infra. </p>
+<p>Once set up, people who have linked their accounts via the  <a href="/setup/">account linking page</a>  will be granted write-access on both services (gitbox and github). People that do not wish to utilize GitHub may continue using thier ASF credentials to push code to gitbox.apache.org - we do not mandate use of one of the other. Account authorization on GitHub typically happens within an hour of linking accounts. </p>
+<hr/>
+</div>
+
+<div style="padding-left: 1em; padding-bottom: 2em; margin: 0 auto; text-align: center; width: 980px;">
+<h3>Our available services:</h3>
+
+<div style="float: left; width: 300px; margin: 10px; text-align: center;">
+    <a href="/repos/asf">
+        <img src="images/git.png" style="height: 100px;"/><br/>
+        Active Git repositories, original or mirrored from active GitHub repositories
+    </a>
+</div>
+ 
+<div style="float: left; width: 300px; margin: 10px; text-align: center;">
+    <a href="/setup/">
+        <img src="images/gitbox.png" style="height: 100px;"/><br/>
+        Link GitHub and ASF accounts (required to push to GitHub)
+    </a>
+</div>
+
+<div style="float: left; width: 300px; margin: 10px; text-align: center;">
+    <a href="/setup/newrepo.html">
+        <img src="images/newrepo.png" style="height: 100px;"/><br/>
+        Create a new GitBox/GitHub repository
+    </a>
+</div>
+
+</div>
+
+<hr/>
+<p style="font-size: smaller; font-style: italic; text-align: center; padding-left: 1em;">
+    Managed by the <a href="https://infra.apache.org/">Apache Infrastructure Team</a>.<br/>
+    Copyright 2019, the Apache Software Foundation.
+    Licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+</p>
+
+    <!-- foundation bundles jquery 2.2.4. we'll fetch from a CDN. -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="js/vendor/what-input.js"></script>
+    <script src="js/vendor/foundation.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+#!/usr/bin/perl -w
+#
+# Find all the lists to which the given user name pattern is subscribed.
+# And then some.
+#
+use strict;
+use DirHandle;
+use Getopt::Long;
+use Symbol;
+use Pod::Usage;
+
+my $listsdir = '/home/apmail/lists';
+my $emit_unsubscribes = 0;
+my @list_regex;
+my @name_regex;
+my $verbosity = 0;
+my $caseless;
+my $moderator;
+my $usage;
+my %cmdopts;
+
+my @hosts;
+my @lists;
+my %podopts = (
+               -exitval => 0,
+               -message => '',
+               -verbose => 1,
+              );
+
+Getopt::Long::Configure(qw( require_order bundling ));
+GetOptions(\%cmdopts,
+           'a=s'      => \@name_regex,
+           'c'        => \$emit_unsubscribes,
+           'd=s'      => \$listsdir,
+           'help|h|?' => \$usage,
+           'l=s'      => \@list_regex,
+           'm'        => \$moderator,
+           'u'        => \$caseless,
+           'v+'       => \$verbosity,
+          )
+    or pod2usage(%podopts);
+push(@name_regex, @ARGV);
+pod2usage(%podopts) if ($usage);
+pod2usage(%podopts, -message => 'At least one eddress must be specified.')
+    if (! @name_regex);
+
+my $dh = gensym();
+my %listmap;
+my $longest = -1;
+
+opendir($dh, $listsdir)
+    or die("Can't find list directory '$listsdir'");
+
+if ($verbosity > 0) {
+    print STDERR "$0: obtaining names of hosts/domains:";
+}
+@lists = readdir($dh);
+closedir($dh);
+for my $host (@lists) {
+    if (($host !~ /^\.\.?$/)
+        && (-d "$listsdir/$host")) {
+        push(@hosts, $host);
+    }
+}
+@lists = ();
+if ($verbosity > 0) {
+    print STDERR ' done; ' . scalar(@hosts) . " hosts.\n";
+}
+
+if ($verbosity > 0) {
+    print STDERR "$0: locating lists:";
+}
+for my $host (@hosts) {
+    my $path = "$listsdir/$host";
+    opendir($dh, $path)
+        or die("Unable to scan directory '$path'");
+    my @files = readdir($dh);
+    closedir($dh);
+    for my $file (@files) {
+        if (($file !~ /^\.\.?$/)
+            && (-d "$path/$file")) {
+            push(@lists, "$path/$file");
+            $listmap{"$file\@$host"} = "$path/$file";
+        }
+    }
+}
+if ($verbosity > 0) {
+    print STDERR ' done; ' . scalar(@lists) . " lists.\n";
+}
+
+if (@list_regex) {
+    my @reduced;
+    my %tempmap;
+    my $pattern = '(?:' . join('|', @list_regex) . ')';
+    if ($verbosity > 1) {
+        print STDERR "$0: Applying list regexes <$pattern>: ";
+    }
+    if (my @matches = grep(($caseless ? m§$pattern§i : m§$pattern§),
+                           keys(%listmap))) {
+        push(@reduced, @matches);
+    }
+    if (@reduced) {
+        for my $list (@reduced) {
+            $tempmap{$list} = $listmap{$list};
+        }
+        %listmap = %tempmap;
+    }
+    if ($verbosity > 1) {
+        print STDERR ' done; now ' . scalar(keys(%tempmap)) . " lists.\n";
+    }
+}
+for my $list (keys(%listmap)) {
+    if ($emit_unsubscribes) {
+        $list = $listmap{$list} . ($moderator ? '/mod' : '');
+    }
+    my $l = length($list);
+    $longest = $l if ($l > $longest);
+}
+$longest++;
+
+@lists = sort cmp_lists (keys(%listmap));
+
+if (! @lists) {
+    print STDERR "$0: no matching lists found\n";
+    exit(1);
+}
+
+if ($verbosity) {
+    print STDERR "$0: scanning lists..\n";
+}
+for my $list (@lists) {
+    my $path = $listmap{$list} . ($moderator ? '/mod' : '');
+#    $list =~ s/\./\@/;
+    if ($verbosity > 1) {
+        print STDERR "$0: scanning $list ($path):";
+    }
+    open($dh, "ezmlm-list $path |")
+        or die("Can't execute ezmlm-list for '$path'");
+    my @subscribers = <$dh>;
+    close($dh);
+    my $pattern = '(?:' . join('|', @name_regex) . ')';
+    if ($verbosity > 2) {
+        print STDERR "<$pattern>";
+    }
+    my @matches = grep(($caseless ? m§$pattern§i : m§$pattern§),
+                       @subscribers);
+    if ($verbosity > 2) {
+        print STDERR '{' . scalar(@matches) . '}';
+    }
+    if (@matches) {
+        if ($emit_unsubscribes) {
+            $list = $path;
+        }
+        $list = sprintf("%-${longest}s ", $list);
+        if ($emit_unsubscribes) {
+            $list = "ezmlm-unsub $list";
+        }
+        else {
+            $list .= ':';
+        }
+        print $list . join($list, @matches);
+    }
+    if ($verbosity > 1) {
+        print STDERR "\n";
+    }
+}
+
+sub cmp_lists {
+    my ($alist, $adomain) = split(/\@/, $a, 2);
+    my ($blist, $bdomain) = split(/\@/, $b, 2);
+    return ($adomain cmp $bdomain) || ($alist cmp $blist);
+}
+__END__
+
+=pod
+
+=head1 NAME
+
+find-subscriber.more -- Advanced EZMLM list searcher
+
+=head1 SYNOPSIS
+
+find-subscriber.more [options] [eddress-pattern ...]
+
+At least one B<-a> option or I<eddress-pattern> must be specified
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-a> I<eddress-pattern>
+
+Search for subscriber eddresses matching the specified
+Perl regular expression.  Multiple patterns may be specified;
+this option may appear multiple times.
+
+=item B<-c>
+
+Rather than printing matching lists and eddresses in human-readable
+form, print them as 'ezmlm-unsub' commands for easy execution
+for global unsubscription.
+
+=item B<-d> I<directory>
+
+Specify the root of the I<ezmlm> list tree hierarchy.  The
+default is C</home/apmail/lists>.
+
+=item B<-l> I<list-pattern>
+
+Only search lists which match the specified Perl regular
+expression.  This option may appear multiple times.
+
+=item B<-m>
+
+Search for eddress patterns among the moderators of the
+lists rather than the subscribers.
+
+=item B<-u>
+
+Use case-insensitive pattern matching.
+
+=item B<-v>
+
+Enable verbose mode.  Each occurrence increases the degree
+of verbosity.
+
+=back
+
+=cut
+
+#
+# Local Variables:
+# mode: cperl
+# tab-width: 4
+# indent-tabs-mode: nil
+# End:
+#

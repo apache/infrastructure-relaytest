@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=1080, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Moin to Confluence Migration Self Serve - BETA</title>
+
+    <!-- Bootstrap -->
+    <link href="css/default.css" rel="stylesheet">
+    <script src="js/selfserve.js"></script>
+  </head>
+  <body onload="loadForm('js/moinform.json?' + Math.random(), 'form');" style="width: 900px; margin: 0px auto;">
+    <h1><img src="images/feather.png" style="height: 64px; vertical-align: middle; margin-right: 10px;"/>Migrate a Moin wiki to Confluence</h1>
+    <div id="form">
+
+    </div>
+    <div style="width: 100%;">
+      <form style="background: #FFD; width: 900px; font-size: 12px; margin: 20px auto;">
+          <p>
+          Important Note:
+            Ticking the 'Import all revisions for all pages' checkbox will preserve and import page revisions for all pages.
+            For Medium to Large moin wikis this could significantly add to the time it takes to migrate 
+            all pages to Confluence. (i.e could take 2 hours or more to complete.)
+          </p>
+          <p>As an example: A 50 page wiki with an average 10 edits per page will add up to improrting 500 pages if you
+             include history. Importing in this context includes the downloading of each page revision, the export of 
+             each page revision, the conversion of each page revision to Confluence format; and finally the upload of 
+             each page revision to our Confluence instance. So each migration step is multiplied</p>
+          <p>Note that we are absolutely fine with projects choosing to import history but we just wanted to make you 
+             aware of the possible significant increase in processing time should you choose to do so.</p>
+      </form>
+    </div>
+  </body>
+</html>

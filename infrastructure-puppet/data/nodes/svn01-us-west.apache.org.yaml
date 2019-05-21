@@ -1,0 +1,736 @@
+---
+classes:
+  - apache
+  - apache::mod::authnz_ldap
+  - apache::mod::dav_svn
+  - apache::mod::geoip
+  - apache::mod::rewrite
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::status
+  - apache::mod::ssl
+  - apbackup
+  - datadog_agent::integrations::apache
+  - httpd_modules
+  - httpd_modules::mod_svn_check_path
+  - blocky
+  - kif
+  - loggy
+  - nfs::server
+  - nfs_asf::server
+  - perl
+  - rootbin_asf
+  - rsync_asf
+  - ssl::name::wildcard_apache_org
+  - stunnel_asf
+  - svnpubsub
+  - subversion_server
+  - vhosts_asf::modules
+  - vhosts_asf::vhosts
+  - zmanda_asf::client
+  
+apache::keepalive:          'On'
+apache::keepalive_timeout:  '15'
+apache::max_keepalive_requests: 1000
+apache::timeout: 600
+apache::default_vhost:      false
+apache::docroot:            '/x1/www'
+apache::manage_user:        false
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '250'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '500'
+apache::mod::event::maxsparethreads: '150'
+apache::mod::event::minsparethreads: '150'
+apache::mod::event::serverlimit: '10'
+apache::mod::event::startservers: '5'
+apache::mod::event::threadlimit: '250'
+apache::mod::event::threadsperchild: '50'
+
+apache::mod::reqtimeout::timeouts:
+  - 'header=30,MinRate=400'
+  - 'body=60,MinRate=300'
+
+apache::mod::status::allow_from:
+  - all
+apache::mod::status::apache_version: '2.3'
+
+apache::mpm_module:         'event'
+apache::serveradmin:        'users@infra.apache.org'
+
+apbackup::gid: 9997
+apbackup::uid: 9997
+
+base::basepackages:
+  - svnmailer
+
+base::hosts:
+  localhost:
+    ip: '127.0.0.1'
+    host_aliases:
+      - 'svn01-us-west-internal.apache.org'
+
+datadog_agent::integrations::apache::url: 'https://svn01-us-west-internal.apache.org/server-status?auto'
+
+fail2ban_asf::config::jails:
+  httpd-svn:
+    filter: apache-auth
+    action:
+      - iptables-allports
+    logpath: /var/log/apache2/svn_https_error_ssl.log
+    findtime: 1800
+    maxretry: 5
+    enable: true
+
+httpd_modules::dev_package:
+  - apache2-dev
+httpd_modules::mod_svn_check_path::required_packages:
+  - libsvn-dev
+  - libapreq2-dev
+httpd_modules::mod_svn_check_path::command: 'apxs2 -DFILTERING -I /usr/include/subversion-1 -i -a -c mod_svn_check_path.c'
+
+ldapclient::ldapservers: 'ldaps://ldap-us-ro.apache.org:636  ldaps://ldap-eu-ro.apache.org:636'
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+
+nfs::server::export:
+  /x1/svn/repos/asf:
+    options:   'ro'
+    clients:   '140.211.11.32(ro)'
+
+perl::module:
+  net_ldap:
+    name: 'Net::LDAP'
+    use_package : true
+
+python::python_pips:
+  gunicorn:
+    ensure: present
+    
+# svn01 gets to talk directly to hermes to bypass spam filters
+# on commit messages (svnmailer)
+
+postfix::server::relayhost: 'hermes.apache.org:2025'
+
+
+rsync_asf::cron_hour: 20
+rsync_asf::cron_minute: 20
+
+rsync_asf::fslist:
+  - /x1/svn/repos/asf
+  - /x1/svn/repos/dist
+  - /x1/svn/repos/infra
+  - /x1/svn/repos/tck
+  - /x1/svn/repos/bigdata
+
+snmp::snmpd_config:
+  - 'disk /x1 10%'
+  - 'disk /x1/svn 10%'
+  - 'disk /x1/svn/repos/asf 10%'
+  - 'disk /x1/svn/repos/dist 10%'
+  - 'disk /x1/svn/repos/infra 10%'
+  - 'disk /x1/svn/repos/private 10%'
+  - 'disk /x1/svn/repos/tck 10%'
+  - 'disk /x1/svn/repos/bigdata 10%'
+  - 'rouser monitor authNoPriv'
+  - 'smuxpeer .1.3.6.1.4.1.674.10892.1'
+  - 'disk / 10000'
+  - 'disk /var 5%'
+  - 'includeAllDisks 10%'
+
+subversion_server::packages:
+  - 'viewvc'
+
+subversion_server::svn_master_hostname: 'svn01-us-west.apache.org'
+
+subversion_server::board_reminders::install_path: '/usr/local/bin/board_reminders'
+subversion_server::board_reminders::packages:
+  - libdate-manip-perl
+  - libfindbin-libs-perl
+  - libfile-slurp-perl
+  - libfile-spec-perl 
+
+vhosts_asf::modules::modules:
+  authz_svn:
+    name: 'authz_svn'
+  svn_check_path:
+    name: 'svn_check_path'
+
+vhosts_asf::vhosts::vhosts:
+  dist:
+    vhost_name: '*'
+    port: 80
+    docroot: '/var/www'
+    servername: 'dist.apache.org'
+    serveraliases:
+      - 'dist.*.apache.org'
+    custom_fragment: |
+      RedirectMatch permanent ^(.*)$ https://dist.apache.org$1
+
+  dist_https:
+    vhost_name: '*'
+    port: 443
+    ssl_cert:  '/etc/ssl/certs/wildcard.apache.org.crt'
+    ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+    ssl_key:  '/etc/ssl/private/wildcard.apache.org.key'
+    ssl: true
+    docroot: '/var/www'
+    servername: 'dist.apache.org'
+    serveraliases:
+      - 'dist.*.apache.org'
+    custom_fragment: |
+      AddType text/plain .asc .md5 .sha .sha1 .sha2 .sha256 .sha512 .sha3 .mds
+      LimitXMLRequestBody 10000000
+      SetEnvIf User-Agent ".*MSIE [2-5].*" nokeepalive ssl-unclean-shutdown downgrade-1.0 force-response-1.0
+
+      RedirectMatch permanent ^/$ https://dist.apache.org/repos/dist
+
+      <Location /repos/dist>
+        DAV svn
+        SVNPath /x1/svn/repos/dist
+
+        SetOutputFilter DEFLATE
+        SetEnvIfNoCase Request_URI \.(?:t?gz|zip|bz2|Z)$ no-gzip dont-vary
+
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        AuthName "ASF Committers"
+        AuthType basic
+        AuthBasicProvider ldap
+        AuthzSVNAccessFile /x1/svn/asf-dist-authorization
+
+        # Disallow PUTs (or anything, really) that are larger than 350M. If a 
+        # PMC needs something larger, they can ask Infra to commit it via 
+        # ra_local. If they will regularly commit artifacts larger than 350M, 
+        # they can # request a LocationMatch section (see below) to set a 
+        # specific limit.
+        LimitRequestBody 350000000
+
+        <LimitExcept GET OPTIONS PROPFIND REPORT>
+          require valid-user
+        </LimitExcept>
+
+        # Some pages make Chrome auto-detect Galician, of all things. Chrome
+        # then offers (erroneously) to translate the page for the user. For now,
+        # we will assume the entire site is in English. However, this may screw
+        # up any pages that have been translated and hosted on the site. But
+        # let's just assume those are using rules which override this default.
+        DefaultLanguage en
+
+      </Location>
+
+      # When a large PUT arrives, it will be directed towards !svn/txr or !svn/wrk
+      # (depending upon the svn client version). The next path component is
+      # specified by the client or server (again, based on the client version),
+      # and then we have the "interesting" path. Based on that match, we define
+      # the limit for that path/PMC.
+      #
+      # NOTE: Infrastructure defines the limit for each path/PMC. Contact them
+      #       for a value larger than the global 100M setting.
+      #
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/pulsar/>
+        LimitRequestBody 450000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/ctakes/>
+        LimitRequestBody 450000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/spark/>
+        LimitRequestBody 450000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/ctakes/>
+        LimitRequestBody 700000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/stratos/>
+        LimitRequestBody 500000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/nifi/>
+        LimitRequestBody 1600000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/openoffice/>
+        LimitRequestBody 100000000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/drill/>
+        LimitRequestBody 400000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/incubator/joshua/>
+        LimitRequestBody 500000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/zeppelin/>
+        LimitRequestBody 1000000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/phoenix/>
+        LimitRequestBody 600000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/kylin/>
+        LimitRequestBody 500000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/ignite/>
+        LimitRequestBody 400000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/hadoop/>
+        LimitRequestBody 750000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/flink/>
+        LimitRequestBody 750000000
+      </LocationMatch>
+      <LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/incubator/druid//>
+        LimitRequestBody 450000000
+      </LocationMatch>
+      #<LocationMatch /repos/dist/!svn/(txr|wrk)/[^/]+/dev/$PMC/>
+      #  LimitRequestBody $LIMIT
+      #</LocationMatch>
+
+  svn:
+    vhost_name: '*'
+    port: 80
+    docroot: '/var/www'
+    servername: 'svn.apache.org'
+    serveraliases:
+      - svn-master.apache.org
+      - svn-us.apache.org
+      - svn-eu.apache.org
+      - svn.*.apache.org
+      - svn01-us-west.apache.org
+      - svn01-us-west.*.apache.org
+    override:
+      - 'All'
+    custom_fragment: |
+      AddType  text/plain; charset=UTF-8  .rdf
+      RewriteEngine On
+
+      Redirect temp /viewcvs.cgi http://svn.apache.org/viewvc
+      Redirect temp /viewvc.cgi http://svn.apache.org/viewvc
+      Redirect temp /viewcvs    http://svn.apache.org/viewvc
+      # Block certain CIDRs from viewvc
+      <Location /viewvc>
+          order allow,deny
+          allow from all
+          deny from 1.80.0.0/13 1.92.0.0/14 1.192.0.0/13 1.202.0.0/15 1.204.0.0/14 14.144.0.0/12 14.208.0.0/12 23.80.54.0/24 23.104.141.0/24 23.105.14.0/24 27.8.0.0/13 27.16.0.0/12 27.36.0.0/14 27.40.0.0/13 27.50.128.0/17 27.54.192.0/18 27.106.128.0/18 27.115.0.0/17 27.148.0.0/14 27.152.0.0/13 27.184.0.0/13 36.32.0.0/14 36.248.0.0/14 42.96.128.0/17 42.120.0.0/15 58.16.0.0/15 58.20.0.0/16 58.21.0.0/16 58.22.0.0/15 58.34.0.0/16 58.37.0.0/16 58.38.0.0/16 58.40.0.0/16 58.42.0.0/16 58.44.0.0/14 58.48.0.0/13 58.56.0.0/15 58.58.0.0/16 58.59.0.0/17 58.60.0.0/14 58.68.128.0/17 58.82.0.0/15 58.100.0.0/15 58.208.0.0/12 58.242.0.0/15 58.246.0.0/15 58.248.0.0/13 59.32.0.0/12 59.51.0.0/16 59.52.0.0/14 59.56.0.0/13 59.72.0.0/16 59.108.0.0/15 59.172.0.0/14 60.0.0.0/13 60.11.0.0/16 60.12.0.0/16 60.24.0.0/13 60.160.0.0/11 60.194.0.0/15 60.208.0.0/13 60.216.0.0/15 60.220.0.0/14 61.4.64.0/20 61.4.80.0/22 61.4.176.0/20 61.48.0.0/13 61.128.0.0/10 61.135.0.0/16 61.136.0.0/18 61.139.0.0/16 61.145.73.208/28 61.147.0.0/16 61.150.0.0/16 61.152.0.0/16 61.154.0.0/16 61.160.0.0/16 61.162.0.0/15 61.164.0.0/16 61.175.0.0/16 61.177.0.0/16 61.179.0.0/16 61.183.0.0/16 61.184.0.0/16 61.185.219.232/29 61.187.0.0/16 61.188.0.0/16 61.232.0.0/14 61.236.0.0/15 61.240.0.0/14 101.64.0.0/13 101.72.0.0/14 101.76.0.0/15 101.80.0.0/12 103.253.4.0/22 106.112.0.0/13 110.6.0.0/15 110.51.0.0/16 110.52.0.0/15 110.80.0.0/13 110.88.0.0/14 110.96.0.0/11 110.173.0.0/19 110.173.32.0/20 110.173.64.0/18 110.192.0.0/11 110.240.0.0/12 111.0.0.0/10 111.72.0.0/13 111.121.0.0/16 111.128.0.0/11 111.160.0.0/13 111.172.0.0/14 111.176.0.0/13 111.228.0.0/14 112.0.0.0/10 112.64.0.0/14 112.80.0.0/12 112.100.0.0/14 112.111.0.0/16 112.122.0.0/15 112.224.0.0/11 113.0.0.0/13 113.8.0.0/15 113.12.0.0/14 113.16.0.0/15 113.18.0.0/16 113.62.0.0/15 113.64.0.0/10 113.128.0.0/15 113.136.0.0/13 113.194.0.0/15 113.204.0.0/14 114.28.0.0/16 114.80.0.0/12 114.96.0.0/13 114.104.0.0/14 114.112.0.0/14 112.109.128.0/17 114.216.0.0/13 114.224.0.0/11 115.24.0.0/15 115.28.0.0/15 115.32.0.0/14 115.48.0.0/12 115.84.0.0/18 115.100.0.0/15 115.148.0.0/14 115.152.0.0/15 115.168.0.0/14 115.212.0.0/16 115.230.0.0/16 115.236.96.0/23 115.236.136.0/22 115.239.228.0/22 116.1.0.0/16 116.2.0.0/15 116.4.0.0/14 116.8.0.0/14 116.16.0.0/12 116.52.0.0/14 116.76.0.0/15 116.90.80.0/20 116.112.0.0/14 116.128.0.0/10 116.204.0.0/15 116.208.0.0/14 116.224.0.0/12 116.254.128.0/18 117.8.0.0/13 117.21.0.0/16 117.22.0.0/15 117.24.0.0/13 117.32.0.0/13 117.40.0.0/14 117.44.0.0/15 117.79.224.0/20 117.80.0.0/12 117.136.0.0/13 118.26.0.0/16 118.72.0.0/13 118.112.0.0/13 118.120.0.0/14 118.132.0.0/14 118.144.0.0/14 118.180.0.0/14 118.186.0.0/15 118.192.0.0/16 118.248.0.0/13 119.0.0.0/13 119.8.0.0/16 119.10.0.0/17 119.18.192.0/20 119.36.0.0/16 119.57.0.0/16 119.60.0.0/16 119.88.0.0/14 119.96.0.0/13 119.112.0.0/13 119.120.0.0/13 119.128.0.0/12 119.144.0.0/14 119.164.0.0/14 119.176.0.0/12 119.233.0.0/16 120.0.0.0/12 120.24.0.0/14 120.32.0.0/13 120.40.0.0/14 120.68.0.0/14 120.80.0.0/13 120.192.0.0/10 121.0.16.0/20 121.8.0.0/13 121.16.0.0/12 121.32.0.0/14 121.60.0.0/14 121.76.0.0/15 121.196.0.0/14 121.204.0.0/14 121.224.0.0/12 122.10.128.0/17 122.51.128.0/17 122.64.0.0/11 122.119.0.0/16 122.136.0.0/13 122.156.0.0/14 122.188.0.0/14 122.192.0.0/14 122.198.0.0/16 122.200.64.0/18 122.224.0.0/12 123.4.0.0/14 123.8.0.0/13 123.52.0.0/14 123.64.0.0/11 123.97.128.0/17 123.100.0.0/19 123.112.0.0/12 123.128.0.0/13 123.138.0.0/15 123.150.0.0/15 123.152.0.0/13 123.164.0.0/14 123.180.0.0/14 123.184.0.0/14 123.196.0.0/15 123.232.0.0/14 123.249.0.0/16 124.42.64.0/18 124.64.0.0/15 124.67.0.0/16 124.73.0.0/16 124.114.0.0/15 124.126.0.0/15 124.128.0.0/13 124.160.0.0/15 124.162.0.0/16 124.163.0.0/16 124.192.0.0/15 124.200.0.0/13 124.226.0.0/15 124.228.0.0/14 124.236.0.0/14 124.240.0.0/17 124.240.128.0/18 124.248.0.0/17 125.36.0.0/14 125.40.0.0/13 125.64.0.0/12 125.79.0.0/16 125.80.0.0/13 125.88.0.0/13 125.104.0.0/13 125.112.0.0/12 125.210.0.0/15 140.224.0.0/16 140.237.0.0/16 140.246.0.0/16 140.249.0.0/16 159.226.0.0/16 171.34.0.0/15 171.36.0.0/14 171.40.0.0/13 175.0.0.0/12 175.16.0.0/13 175.24.0.0/14 175.30.0.0/15 175.42.0.0/15 175.44.0.0/16 175.46.0.0/15 175.48.0.0/12 175.64.0.0/11 175.102.0.0/16 175.106.128.0/17 175.146.0.0/15 175.148.0.0/14 175.152.0.0/14 175.160.0.0/12 175.178.0.0/16 175.184.128.0/18 175.185.0.0/16 175.186.0.0/15 175.188.0.0/14 180.76.0.0/16 180.96.0.0/11 180.136.0.0/13 180.152.0.0/13 180.208.0.0/15 182.18.0.0/17 182.32.0.0/12 182.88.0.0/14 182.112.0.0/12 182.128.0.0/12 183.0.0.0/10 183.64.0.0/13 183.129.0.0/16 183.148.0.0/16 183.160.0.0/12 183.184.0.0/13 183.192.0.0/11 192.34.109.224/28 192.74.224.0/19 198.2.203.64/28 198.2.212.160/28 202.43.144.0/22 202.46.32.0/19 202.66.0.0/16 202.75.208.0/20 202.96.0.0/12 202.111.160.0/19 202.112.0.0/14 202.117.0.0/16 202.165.176.0/20 202.196.80.0/20 203.69.0.0/16 203.86.0.0/18 203.86.64.0/19 203.93.0.0/16 203.169.160.0/19 203.171.224.0/20 210.5.0.0/19 210.14.128.0/19 210.21.0.0/16 210.32.0.0/14 210.51.0.0/16 210.52.0.0/15 210.77.0.0/16 210.192.96.0/19 211.76.96.0/20 211.78.208.0/20 211.86.144.0/20 211.90.0.0/15 211.92.0.0/14 211.96.0.0/13 211.136.0.0/13 211.144.12.0/22 211.144.96.0/19 211.144.160.0/20 211.147.0.0/16 211.152.14.0/24 211.154.64.0/19 211.154.128.0/19 211.155.24.0/22 211.157.32.0/19 211.160.0.0/13 211.233.70.0/24 218.0.0.0/11 218.56.0.0/13 218.64.0.0/11 218.84.0.0/14 218.88.0.0/13 218.96.0.0/14 218.102.0.0/16 218.104.0.0/14 218.108.0.0/15 218.194.80.0/20 218.200.0.0/13 218.240.0.0/13 219.128.0.0/11 219.154.0.0/15 219.223.192.0/18 219.232.0.0/16 219.234.80.0/20 219.235.0.0/16 220.112.0.0/16 220.154.0.0/15 220.160.0.0/11 220.181.0.0/16 220.191.0.0/16 220.192.0.0/12 220.228.70.0/24 220.242.0.0/15 220.248.0.0/14 220.250.0.0/19 220.252.0.0/16 221.0.0.0/12 221.122.0.0/15 221.176.0.0/13 221.192.0.0/14 221.200.0.0/14 221.204.0.0/15 221.206.0.0/16 221.207.0.0/16 221.208.0.0/12 221.212.0.0/15 221.214.0.0/15 221.216.0.0/13 221.224.0.0/13 221.228.0.0/14 221.232.0.0/13 222.32.0.0/11 222.64.0.0/12 222.80.0.0/12 222.132.0.0/14 222.136.0.0/13 222.168.0.0/13 222.172.222.0/24 222.176.0.0/13 222.184.0.0/13 222.200.0.0/16 222.208.0.0/13 222.219.0.0/16 222.220.0.0/15 222.240.0.0/13 223.4.0.0/14 223.64.0.0/11 223.144.0.0/12 223.240.0.0/13 221.163.46.0/24 222.96.0.0/12 222.112.0.0/13 222.120.0.0/15 222.122.0.0/16 222.231.0.0/18 222.232.0.0/13
+      </Location>
+
+      # ProxyPass to gunicorn
+      ProxyPassMatch ^/viewvc/?(.*)$ http://localhost:8080/$1
+      Alias /vc-static /usr/share/viewvc/docroot/
+      
+      # Rewrite /r123456 to viewvc
+      RewriteRule ^/r(\d+)$ /viewvc?view=revision&revision=$1 [R=302,L]
+      # Rewrite git-svn-id URLs to viewvc (/repos/asf/foo/trunk@123456)
+      RewriteRule ^/repos/asf/[^@]+@(\d+)$ /viewvc?view=revision&revision=$1 [R=302,L]
+      # The main repository
+      
+      # tlp migrations
+      
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =GET [OR]
+      RewriteCond %%{}{REQUEST_METHOD} =HEAD
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/incubator/(.+)
+      RewriteCond /repos/asf/%1?ckpath -U
+      RewriteRule .* /repos/asf/%1 [L,R=301]
+
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =PROPFIND
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(?:bc|rvr)/(\d+)/incubator/(.+)
+      RewriteCond /repos/asf/%2?ckpath -U
+      RewriteRule .* /repos/asf/%2 [L,R=301]
+
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =REPORT
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(vcc/default|me)
+      RewriteCond /repos/asf?ckpath=/repos/asf/incubator -U
+      RewriteRule .* %%{}{PATH_INFO} [L,R=301]
+
+      # openejb -> tomee
+
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =GET [OR]
+      RewriteCond %%{}{REQUEST_METHOD} =HEAD
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/openejb/(.+)
+      RewriteCond /repos/asf/tomee/%1?ckpath -U
+      RewriteRule .* /repos/asf/tomee/%1 [L,R=301]
+
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =PROPFIND
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(?:bc|rvr)/(\d+)/openejb/(.+)
+      RewriteCond /repos/asf/tomee/%2?ckpath -U
+      RewriteRule .* /repos/asf/tomee/%2 [L,R=301]
+
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =REPORT
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(vcc/default|me)
+      RewriteCond /repos/asf/tomee?ckpath=/repos/asf/openejb -U
+      RewriteRule .* %%{}{PATH_INFO} [L,R=301]
+
+      Redirect /dump http://svn-dump.apache.org
+
+
+
+      <Location /repos/asf>
+        DAV svn
+        SVNPath /x1/svn/repos/asf
+        SVNCheckPathPrefix  /repos/asf
+        SetOutputFilter DEFLATE
+        AuthzSVNAccessFile /x1/svn/asf-authorization
+            
+        LimitRequestBody 100000000
+        <LimitExcept GET POST OPTIONS PROPFIND REPORT>
+          Order allow,deny
+          Deny from all
+        </LimitExcept>
+      </Location>
+
+      <Location "/server-status">
+        SetHandler server-status
+        Require local
+      </Location>
+  
+      
+  svn_https:
+    vhost_name: '*'
+    port: 443
+    ssl_cert:  '/etc/ssl/certs/wildcard.apache.org.crt'
+    ssl_chain: '/etc/ssl/certs/wildcard.apache.org.chain'
+    ssl_key:  '/etc/ssl/private/wildcard.apache.org.key'
+    ssl: true
+    docroot: '/var/www'
+    servername: 'svn.apache.org'
+    serveraliases:
+      - svn-master.apache.org
+      - svn-us.apache.org
+      - svn-eu.apache.org
+      - svn.*.apache.org
+      - svn01-us-west.apache.org
+      - svn01-us-west.*.apache.org
+    override:
+      - 'all'
+    custom_fragment: |
+      AddType  text/plain; charset=UTF-8  .rdf
+      LimitXMLRequestBody 10000000
+      RewriteEngine On
+      # Block certain CIDRs from viewvc
+      <Location /viewvc>
+          order allow,deny
+          allow from all
+          deny from 1.80.0.0/13 1.92.0.0/14 1.192.0.0/13 1.202.0.0/15 1.204.0.0/14 14.144.0.0/12 14.208.0.0/12 23.80.54.0/24 23.104.141.0/24 23.105.14.0/24 27.8.0.0/13 27.16.0.0/12 27.36.0.0/14 27.40.0.0/13 27.50.128.0/17 27.54.192.0/18 27.106.128.0/18 27.115.0.0/17 27.148.0.0/14 27.152.0.0/13 27.184.0.0/13 36.32.0.0/14 36.248.0.0/14 42.96.128.0/17 42.120.0.0/15 58.16.0.0/15 58.20.0.0/16 58.21.0.0/16 58.22.0.0/15 58.34.0.0/16 58.37.0.0/16 58.38.0.0/16 58.40.0.0/16 58.42.0.0/16 58.44.0.0/14 58.48.0.0/13 58.56.0.0/15 58.58.0.0/16 58.59.0.0/17 58.60.0.0/14 58.68.128.0/17 58.82.0.0/15 58.100.0.0/15 58.208.0.0/12 58.242.0.0/15 58.246.0.0/15 58.248.0.0/13 59.32.0.0/12 59.51.0.0/16 59.52.0.0/14 59.56.0.0/13 59.72.0.0/16 59.108.0.0/15 59.172.0.0/14 60.0.0.0/13 60.11.0.0/16 60.12.0.0/16 60.24.0.0/13 60.160.0.0/11 60.194.0.0/15 60.208.0.0/13 60.216.0.0/15 60.220.0.0/14 61.4.64.0/20 61.4.80.0/22 61.4.176.0/20 61.48.0.0/13 61.128.0.0/10 61.135.0.0/16 61.136.0.0/18 61.139.0.0/16 61.145.73.208/28 61.147.0.0/16 61.150.0.0/16 61.152.0.0/16 61.154.0.0/16 61.160.0.0/16 61.162.0.0/15 61.164.0.0/16 61.175.0.0/16 61.177.0.0/16 61.179.0.0/16 61.183.0.0/16 61.184.0.0/16 61.185.219.232/29 61.187.0.0/16 61.188.0.0/16 61.232.0.0/14 61.236.0.0/15 61.240.0.0/14 101.64.0.0/13 101.72.0.0/14 101.76.0.0/15 101.80.0.0/12 103.253.4.0/22 106.112.0.0/13 110.6.0.0/15 110.51.0.0/16 110.52.0.0/15 110.80.0.0/13 110.88.0.0/14 110.96.0.0/11 110.173.0.0/19 110.173.32.0/20 110.173.64.0/18 110.192.0.0/11 110.240.0.0/12 111.0.0.0/10 111.72.0.0/13 111.121.0.0/16 111.128.0.0/11 111.160.0.0/13 111.172.0.0/14 111.176.0.0/13 111.228.0.0/14 112.0.0.0/10 112.64.0.0/14 112.80.0.0/12 112.100.0.0/14 112.111.0.0/16 112.122.0.0/15 112.224.0.0/11 113.0.0.0/13 113.8.0.0/15 113.12.0.0/14 113.16.0.0/15 113.18.0.0/16 113.62.0.0/15 113.64.0.0/10 113.128.0.0/15 113.136.0.0/13 113.194.0.0/15 113.204.0.0/14 114.28.0.0/16 114.80.0.0/12 114.96.0.0/13 114.104.0.0/14 114.112.0.0/14 112.109.128.0/17 114.216.0.0/13 114.224.0.0/11 115.24.0.0/15 115.28.0.0/15 115.32.0.0/14 115.48.0.0/12 115.84.0.0/18 115.100.0.0/15 115.148.0.0/14 115.152.0.0/15 115.168.0.0/14 115.212.0.0/16 115.230.0.0/16 115.236.96.0/23 115.236.136.0/22 115.239.228.0/22 116.1.0.0/16 116.2.0.0/15 116.4.0.0/14 116.8.0.0/14 116.16.0.0/12 116.52.0.0/14 116.76.0.0/15 116.90.80.0/20 116.112.0.0/14 116.128.0.0/10 116.204.0.0/15 116.208.0.0/14 116.224.0.0/12 116.254.128.0/18 117.8.0.0/13 117.21.0.0/16 117.22.0.0/15 117.24.0.0/13 117.32.0.0/13 117.40.0.0/14 117.44.0.0/15 117.79.224.0/20 117.80.0.0/12 117.136.0.0/13 118.26.0.0/16 118.72.0.0/13 118.112.0.0/13 118.120.0.0/14 118.132.0.0/14 118.144.0.0/14 118.180.0.0/14 118.186.0.0/15 118.192.0.0/16 118.248.0.0/13 119.0.0.0/13 119.8.0.0/16 119.10.0.0/17 119.18.192.0/20 119.36.0.0/16 119.57.0.0/16 119.60.0.0/16 119.88.0.0/14 119.96.0.0/13 119.112.0.0/13 119.120.0.0/13 119.128.0.0/12 119.144.0.0/14 119.164.0.0/14 119.176.0.0/12 119.233.0.0/16 120.0.0.0/12 120.24.0.0/14 120.32.0.0/13 120.40.0.0/14 120.68.0.0/14 120.80.0.0/13 120.192.0.0/10 121.0.16.0/20 121.8.0.0/13 121.16.0.0/12 121.32.0.0/14 121.60.0.0/14 121.76.0.0/15 121.196.0.0/14 121.204.0.0/14 121.224.0.0/12 122.10.128.0/17 122.51.128.0/17 122.64.0.0/11 122.119.0.0/16 122.136.0.0/13 122.156.0.0/14 122.188.0.0/14 122.192.0.0/14 122.198.0.0/16 122.200.64.0/18 122.224.0.0/12 123.4.0.0/14 123.8.0.0/13 123.52.0.0/14 123.64.0.0/11 123.97.128.0/17 123.100.0.0/19 123.112.0.0/12 123.128.0.0/13 123.138.0.0/15 123.150.0.0/15 123.152.0.0/13 123.164.0.0/14 123.180.0.0/14 123.184.0.0/14 123.196.0.0/15 123.232.0.0/14 123.249.0.0/16 124.42.64.0/18 124.64.0.0/15 124.67.0.0/16 124.73.0.0/16 124.114.0.0/15 124.126.0.0/15 124.128.0.0/13 124.160.0.0/15 124.162.0.0/16 124.163.0.0/16 124.192.0.0/15 124.200.0.0/13 124.226.0.0/15 124.228.0.0/14 124.236.0.0/14 124.240.0.0/17 124.240.128.0/18 124.248.0.0/17 125.36.0.0/14 125.40.0.0/13 125.64.0.0/12 125.79.0.0/16 125.80.0.0/13 125.88.0.0/13 125.104.0.0/13 125.112.0.0/12 125.210.0.0/15 140.224.0.0/16 140.237.0.0/16 140.246.0.0/16 140.249.0.0/16 159.226.0.0/16 171.34.0.0/15 171.36.0.0/14 171.40.0.0/13 175.0.0.0/12 175.16.0.0/13 175.24.0.0/14 175.30.0.0/15 175.42.0.0/15 175.44.0.0/16 175.46.0.0/15 175.48.0.0/12 175.64.0.0/11 175.102.0.0/16 175.106.128.0/17 175.146.0.0/15 175.148.0.0/14 175.152.0.0/14 175.160.0.0/12 175.178.0.0/16 175.184.128.0/18 175.185.0.0/16 175.186.0.0/15 175.188.0.0/14 180.76.0.0/16 180.96.0.0/11 180.136.0.0/13 180.152.0.0/13 180.208.0.0/15 182.18.0.0/17 182.32.0.0/12 182.88.0.0/14 182.112.0.0/12 182.128.0.0/12 183.0.0.0/10 183.64.0.0/13 183.129.0.0/16 183.148.0.0/16 183.160.0.0/12 183.184.0.0/13 183.192.0.0/11 192.34.109.224/28 192.74.224.0/19 198.2.203.64/28 198.2.212.160/28 202.43.144.0/22 202.46.32.0/19 202.66.0.0/16 202.75.208.0/20 202.96.0.0/12 202.111.160.0/19 202.112.0.0/14 202.117.0.0/16 202.165.176.0/20 202.196.80.0/20 203.69.0.0/16 203.86.0.0/18 203.86.64.0/19 203.93.0.0/16 203.169.160.0/19 203.171.224.0/20 210.5.0.0/19 210.14.128.0/19 210.21.0.0/16 210.32.0.0/14 210.51.0.0/16 210.52.0.0/15 210.77.0.0/16 210.192.96.0/19 211.76.96.0/20 211.78.208.0/20 211.86.144.0/20 211.90.0.0/15 211.92.0.0/14 211.96.0.0/13 211.136.0.0/13 211.144.12.0/22 211.144.96.0/19 211.144.160.0/20 211.147.0.0/16 211.152.14.0/24 211.154.64.0/19 211.154.128.0/19 211.155.24.0/22 211.157.32.0/19 211.160.0.0/13 211.233.70.0/24 218.0.0.0/11 218.56.0.0/13 218.64.0.0/11 218.84.0.0/14 218.88.0.0/13 218.96.0.0/14 218.102.0.0/16 218.104.0.0/14 218.108.0.0/15 218.194.80.0/20 218.200.0.0/13 218.240.0.0/13 219.128.0.0/11 219.154.0.0/15 219.223.192.0/18 219.232.0.0/16 219.234.80.0/20 219.235.0.0/16 220.112.0.0/16 220.154.0.0/15 220.160.0.0/11 220.181.0.0/16 220.191.0.0/16 220.192.0.0/12 220.228.70.0/24 220.242.0.0/15 220.248.0.0/14 220.250.0.0/19 220.252.0.0/16 221.0.0.0/12 221.122.0.0/15 221.176.0.0/13 221.192.0.0/14 221.200.0.0/14 221.204.0.0/15 221.206.0.0/16 221.207.0.0/16 221.208.0.0/12 221.212.0.0/15 221.214.0.0/15 221.216.0.0/13 221.224.0.0/13 221.228.0.0/14 221.232.0.0/13 222.32.0.0/11 222.64.0.0/12 222.80.0.0/12 222.132.0.0/14 222.136.0.0/13 222.168.0.0/13 222.172.222.0/24 222.176.0.0/13 222.184.0.0/13 222.200.0.0/16 222.208.0.0/13 222.219.0.0/16 222.220.0.0/15 222.240.0.0/13 223.4.0.0/14 223.64.0.0/11 223.144.0.0/12 223.240.0.0/13 221.163.46.0/24 222.96.0.0/12 222.112.0.0/13 222.120.0.0/15 222.122.0.0/16 222.231.0.0/18 222.232.0.0/13
+      </Location>
+      # This is on port 80, might as well be on port 443 too!
+      Redirect temp /viewcvs.cgi https://svn.apache.org/viewvc
+      Redirect temp /viewvc.cgi https://svn.apache.org/viewvc
+      Redirect temp /viewcvs    https://svn.apache.org/viewvc
+      
+      # ProxyPass to gunicorn
+      ProxyPassMatch ^/viewvc/?(.*)$ http://localhost:8080/$1
+      Alias /vc-static /usr/share/viewvc/docroot/
+      
+      # Rewrite /r123456 to viewvc
+      RewriteRule ^/r(\d+)$ /viewvc?view=revision&revision=$1 [R=302,L]
+      # Rewrite git-svn-id URLs to viewvc (/repos/asf/foo/trunk@123456)
+      RewriteRule ^/repos/asf/[^@]+@(\d+)$ /viewvc?view=revision&revision=$1 [R=302,L]
+      
+      # The main repository
+      
+      
+      # tlp migrations
+      
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =GET [OR]
+      RewriteCond %%{}{REQUEST_METHOD} =HEAD
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/incubator/(.+)
+      RewriteCond /repos/asf/%1?ckpath -U
+      RewriteRule .* /repos/asf/%1 [L,R=301]
+        
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =PROPFIND
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(?:bc|rvr)/(\d+)/incubator/(.+)
+      RewriteCond /repos/asf/%2?ckpath -U
+      RewriteRule .* /repos/asf/%2 [L,R=301]
+      
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =REPORT
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(vcc/default|me)
+      RewriteCond /repos/asf?ckpath=/repos/asf/incubator -U
+      RewriteRule .* %%{}{PATH_INFO} [L,R=301]
+        
+      # openejb -> tomee
+        
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =GET [OR]
+      RewriteCond %%{}{REQUEST_METHOD} =HEAD
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/openejb/(.+)
+      RewriteCond /repos/asf/tomee/%1?ckpath -U
+      RewriteRule .* /repos/asf/tomee/%1 [L,R=301]
+        
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =PROPFIND
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(?:bc|rvr)/(\d+)/openejb/(.+)
+      RewriteCond /repos/asf/tomee/%2?ckpath -U
+      RewriteRule .* /repos/asf/tomee/%2 [L,R=301]
+        
+      RewriteCond %%{}{IS_SUBREQ} =false
+      RewriteCond %%{}{REQUEST_METHOD} =REPORT
+      RewriteCond %%{}{REQUEST_URI} /repos/asf/!svn/(vcc/default|me)
+      RewriteCond /repos/asf/tomee?ckpath=/repos/asf/openejb -U
+      RewriteRule .* %%{}{PATH_INFO} [L,R=301]
+        
+      Redirect /dump http://svn-dump.apache.org
+
+      <Location /viewvc>
+          order allow,deny
+          allow from all
+          deny from 1.80.0.0/13 1.92.0.0/14 1.192.0.0/13 1.202.0.0/15 1.204.0.0/14 14.144.0.0/12 14.208.0.0/12 23.80.54.0/24 23.104.141.0/24 23.105.14.0/24 27.8.0.0/13 27.16.0.0/12 27.36.0.0/14 27.40.0.0/13 27.50.128.0/17 27.54.192.0/18 27.106.128.0/18 27.115.0.0/17 27.148.0.0/14 27.152.0.0/13 27.184.0.0/13 36.32.0.0/14 36.248.0.0/14 42.96.128.0/17 42.120.0.0/15 58.16.0.0/15 58.20.0.0/16 58.21.0.0/16 58.22.0.0/15 58.34.0.0/16 58.37.0.0/16 58.38.0.0/16 58.40.0.0/16 58.42.0.0/16 58.44.0.0/14 58.48.0.0/13 58.56.0.0/15 58.58.0.0/16 58.59.0.0/17 58.60.0.0/14 58.68.128.0/17 58.82.0.0/15 58.100.0.0/15 58.208.0.0/12 58.242.0.0/15 58.246.0.0/15 58.248.0.0/13 59.32.0.0/12 59.51.0.0/16 59.52.0.0/14 59.56.0.0/13 59.72.0.0/16 59.108.0.0/15 59.172.0.0/14 60.0.0.0/13 60.11.0.0/16 60.12.0.0/16 60.24.0.0/13 60.160.0.0/11 60.194.0.0/15 60.208.0.0/13 60.216.0.0/15 60.220.0.0/14 61.4.64.0/20 61.4.80.0/22 61.4.176.0/20 61.48.0.0/13 61.128.0.0/10 61.135.0.0/16 61.136.0.0/18 61.139.0.0/16 61.145.73.208/28 61.147.0.0/16 61.150.0.0/16 61.152.0.0/16 61.154.0.0/16 61.160.0.0/16 61.162.0.0/15 61.164.0.0/16 61.175.0.0/16 61.177.0.0/16 61.179.0.0/16 61.183.0.0/16 61.184.0.0/16 61.185.219.232/29 61.187.0.0/16 61.188.0.0/16 61.232.0.0/14 61.236.0.0/15 61.240.0.0/14 101.64.0.0/13 101.72.0.0/14 101.76.0.0/15 101.80.0.0/12 103.253.4.0/22 106.112.0.0/13 110.6.0.0/15 110.51.0.0/16 110.52.0.0/15 110.80.0.0/13 110.88.0.0/14 110.96.0.0/11 110.173.0.0/19 110.173.32.0/20 110.173.64.0/18 110.192.0.0/11 110.240.0.0/12 111.0.0.0/10 111.72.0.0/13 111.121.0.0/16 111.128.0.0/11 111.160.0.0/13 111.172.0.0/14 111.176.0.0/13 111.228.0.0/14 112.0.0.0/10 112.64.0.0/14 112.80.0.0/12 112.100.0.0/14 112.111.0.0/16 112.122.0.0/15 112.224.0.0/11 113.0.0.0/13 113.8.0.0/15 113.12.0.0/14 113.16.0.0/15 113.18.0.0/16 113.62.0.0/15 113.64.0.0/10 113.128.0.0/15 113.136.0.0/13 113.194.0.0/15 113.204.0.0/14 114.28.0.0/16 114.80.0.0/12 114.96.0.0/13 114.104.0.0/14 114.112.0.0/14 112.109.128.0/17 114.216.0.0/13 114.224.0.0/11 115.24.0.0/15 115.28.0.0/15 115.32.0.0/14 115.48.0.0/12 115.84.0.0/18 115.100.0.0/15 115.148.0.0/14 115.152.0.0/15 115.168.0.0/14 115.212.0.0/16 115.230.0.0/16 115.236.96.0/23 115.236.136.0/22 115.239.228.0/22 116.1.0.0/16 116.2.0.0/15 116.4.0.0/14 116.8.0.0/14 116.16.0.0/12 116.52.0.0/14 116.76.0.0/15 116.90.80.0/20 116.112.0.0/14 116.128.0.0/10 116.204.0.0/15 116.208.0.0/14 116.224.0.0/12 116.254.128.0/18 117.8.0.0/13 117.21.0.0/16 117.22.0.0/15 117.24.0.0/13 117.32.0.0/13 117.40.0.0/14 117.44.0.0/15 117.79.224.0/20 117.80.0.0/12 117.136.0.0/13 118.26.0.0/16 118.72.0.0/13 118.112.0.0/13 118.120.0.0/14 118.132.0.0/14 118.144.0.0/14 118.180.0.0/14 118.186.0.0/15 118.192.0.0/16 118.248.0.0/13 119.0.0.0/13 119.8.0.0/16 119.10.0.0/17 119.18.192.0/20 119.36.0.0/16 119.57.0.0/16 119.60.0.0/16 119.88.0.0/14 119.96.0.0/13 119.112.0.0/13 119.120.0.0/13 119.128.0.0/12 119.144.0.0/14 119.164.0.0/14 119.176.0.0/12 119.233.0.0/16 120.0.0.0/12 120.24.0.0/14 120.32.0.0/13 120.40.0.0/14 120.68.0.0/14 120.80.0.0/13 120.192.0.0/10 121.0.16.0/20 121.8.0.0/13 121.16.0.0/12 121.32.0.0/14 121.60.0.0/14 121.76.0.0/15 121.196.0.0/14 121.204.0.0/14 121.224.0.0/12 122.10.128.0/17 122.51.128.0/17 122.64.0.0/11 122.119.0.0/16 122.136.0.0/13 122.156.0.0/14 122.188.0.0/14 122.192.0.0/14 122.198.0.0/16 122.200.64.0/18 122.224.0.0/12 123.4.0.0/14 123.8.0.0/13 123.52.0.0/14 123.64.0.0/11 123.97.128.0/17 123.100.0.0/19 123.112.0.0/12 123.128.0.0/13 123.138.0.0/15 123.150.0.0/15 123.152.0.0/13 123.164.0.0/14 123.180.0.0/14 123.184.0.0/14 123.196.0.0/15 123.232.0.0/14 123.249.0.0/16 124.42.64.0/18 124.64.0.0/15 124.67.0.0/16 124.73.0.0/16 124.114.0.0/15 124.126.0.0/15 124.128.0.0/13 124.160.0.0/15 124.162.0.0/16 124.163.0.0/16 124.192.0.0/15 124.200.0.0/13 124.226.0.0/15 124.228.0.0/14 124.236.0.0/14 124.240.0.0/17 124.240.128.0/18 124.248.0.0/17 125.36.0.0/14 125.40.0.0/13 125.64.0.0/12 125.79.0.0/16 125.80.0.0/13 125.88.0.0/13 125.104.0.0/13 125.112.0.0/12 125.210.0.0/15 140.224.0.0/16 140.237.0.0/16 140.246.0.0/16 140.249.0.0/16 159.226.0.0/16 171.34.0.0/15 171.36.0.0/14 171.40.0.0/13 175.0.0.0/12 175.16.0.0/13 175.24.0.0/14 175.30.0.0/15 175.42.0.0/15 175.44.0.0/16 175.46.0.0/15 175.48.0.0/12 175.64.0.0/11 175.102.0.0/16 175.106.128.0/17 175.146.0.0/15 175.148.0.0/14 175.152.0.0/14 175.160.0.0/12 175.178.0.0/16 175.184.128.0/18 175.185.0.0/16 175.186.0.0/15 175.188.0.0/14 180.76.0.0/16 180.96.0.0/11 180.136.0.0/13 180.152.0.0/13 180.208.0.0/15 182.18.0.0/17 182.32.0.0/12 182.88.0.0/14 182.112.0.0/12 182.128.0.0/12 183.0.0.0/10 183.64.0.0/13 183.129.0.0/16 183.148.0.0/16 183.160.0.0/12 183.184.0.0/13 183.192.0.0/11 192.34.109.224/28 192.74.224.0/19 198.2.203.64/28 198.2.212.160/28 202.43.144.0/22 202.46.32.0/19 202.66.0.0/16 202.75.208.0/20 202.96.0.0/12 202.111.160.0/19 202.112.0.0/14 202.117.0.0/16 202.165.176.0/20 202.196.80.0/20 203.69.0.0/16 203.86.0.0/18 203.86.64.0/19 203.93.0.0/16 203.169.160.0/19 203.171.224.0/20 210.5.0.0/19 210.14.128.0/19 210.21.0.0/16 210.32.0.0/14 210.51.0.0/16 210.52.0.0/15 210.77.0.0/16 210.192.96.0/19 211.76.96.0/20 211.78.208.0/20 211.86.144.0/20 211.90.0.0/15 211.92.0.0/14 211.96.0.0/13 211.136.0.0/13 211.144.12.0/22 211.144.96.0/19 211.144.160.0/20 211.147.0.0/16 211.152.14.0/24 211.154.64.0/19 211.154.128.0/19 211.155.24.0/22 211.157.32.0/19 211.160.0.0/13 211.233.70.0/24 218.0.0.0/11 218.56.0.0/13 218.64.0.0/11 218.84.0.0/14 218.88.0.0/13 218.96.0.0/14 218.102.0.0/16 218.104.0.0/14 218.108.0.0/15 218.194.80.0/20 218.200.0.0/13 218.240.0.0/13 219.128.0.0/11 219.154.0.0/15 219.223.192.0/18 219.232.0.0/16 219.234.80.0/20 219.235.0.0/16 220.112.0.0/16 220.154.0.0/15 220.160.0.0/11 220.181.0.0/16 220.191.0.0/16 220.192.0.0/12 220.228.70.0/24 220.242.0.0/15 220.248.0.0/14 220.250.0.0/19 220.252.0.0/16 221.0.0.0/12 221.122.0.0/15 221.176.0.0/13 221.192.0.0/14 221.200.0.0/14 221.204.0.0/15 221.206.0.0/16 221.207.0.0/16 221.208.0.0/12 221.212.0.0/15 221.214.0.0/15 221.216.0.0/13 221.224.0.0/13 221.228.0.0/14 221.232.0.0/13 222.32.0.0/11 222.64.0.0/12 222.80.0.0/12 222.132.0.0/14 222.136.0.0/13 222.168.0.0/13 222.172.222.0/24 222.176.0.0/13 222.184.0.0/13 222.200.0.0/16 222.208.0.0/13 222.219.0.0/16 222.220.0.0/15 222.240.0.0/13 223.4.0.0/14 223.64.0.0/11 223.144.0.0/12 223.240.0.0/13 221.163.46.0/24 222.96.0.0/12 222.112.0.0/13 222.120.0.0/15 222.122.0.0/16 222.231.0.0/18 222.232.0.0/13
+      </Location>
+      
+      <Location /repos/asf>
+        DAV svn
+        SVNPath /x1/svn/repos/asf
+        SVNCheckPathPrefix  /repos/asf
+        
+        # Disable compression for git.apache.org which doesn't like it very much
+        # Enable for everyone else
+        <If "%%{}{REMOTE_ADDR} != '54.84.58.65'">
+          SetOutputFilter DEFLATE
+        </If>
+        
+          
+        AuthName "ASF Committers"
+        AuthType Basic
+        AuthBasicProvider ldap file
+          
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+          
+        #Fall back to to using the local htpasswd file if LDAP fails.
+        AuthUserFile /x1/svn/asf-committers
+          
+        ### use a different authorization file?
+        AuthzSVNAccessFile /x1/svn/asf-authorization
+          
+        Require valid-user
+        Satisfy any
+          
+      </Location>
+
+      # test repo
+
+      <Location /repos/test>
+        DAV svn
+        SVNPath /x1/svn/repos/test
+        SVNCheckPathPrefix  /repos/test
+        SetOutputFilter DEFLATE
+
+        AuthName "ASF Committers"
+        AuthType Basic
+        AuthBasicProvider ldap file
+
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+
+        #Fall back to to using the local htpasswd file if LDAP fails.
+        AuthUserFile /x1/svn/asf-committers
+
+        ### use a different authorization file?
+        AuthzSVNAccessFile /x1/svn/asf-authorization
+
+        Require valid-user
+        Satisfy any
+
+      </Location>
+
+      # bigdata repo
+
+      <Location /repos/bigdata>
+        DAV svn
+        SVNPath /x1/svn/repos/bigdata
+        SVNCheckPathPrefix  /repos/bigdata
+        SetOutputFilter DEFLATE
+
+        AuthName "ASF Committers"
+        AuthType Basic
+        AuthBasicProvider ldap file
+
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+
+        #Fall back to to using the local htpasswd file if LDAP fails.
+        AuthUserFile /x1/svn/asf-committers
+
+        AuthzSVNAccessFile /x1/svn/asf-authorization
+
+        Require valid-user
+        Satisfy any
+
+      </Location>
+        
+      # Needed for sync
+      <Location /repos/asf-proxy-sync>
+        DAV svn
+        SVNPath /x1/svn/repos/asf
+        Order deny,allow
+        Allow from 140.211.11.105
+        Deny from all
+          
+        AuthName "ASF sync"
+        AuthType Basic
+        AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require user asf-sync-process
+      </Location>
+        
+      # Needed for sync
+      <Location /repos/private-proxy-sync>
+        DAV svn
+        SVNPath /x1/svn/repos/private
+        Order deny,allow
+        Allow from 140.211.11.105
+        Deny from all
+          
+        AuthName "ASF sync"
+        AuthType Basic
+        AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require user asf-sync-process
+      </Location>
+        
+      # Needed for sync
+      <Location /repos/tck-proxy-sync>
+        DAV svn
+        SVNPath /x1/svn/repos/tck
+        Order deny,allow
+        Allow from 140.211.11.105
+        Deny from all
+          
+        AuthName "ASF sync"
+        AuthType Basic
+        AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require user asf-sync-process
+      </Location>
+        
+      # This repository is private to the Foundation
+      <Location /repos/private>
+        DAV svn
+        SVNPath /x1/svn/repos/private
+        
+        SetOutputFilter DEFLATE
+        
+        AuthName "ASF Members"
+        AuthType Basic
+        AuthBasicProvider ldap file
+          
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+         
+        #Fall back to to using the local htpasswd file if LDAP fails.
+        AuthUserFile /x1/svn/asf-committers
+          
+        ### use a different authorization file?
+        AuthzSVNAccessFile /x1/svn/pit-authorization
+          
+        Require valid-user
+        Satisfy any
+          
+      </Location>
+        
+      # This repository is private to the Geronimo group for the J2EE TCK
+      <Location /repos/tck>
+        DAV svn
+        SVNPath /x1/svn/repos/tck
+        
+        SetOutputFilter DEFLATE
+          
+        AuthName "ASF TCK Users"
+        AuthType Basic
+        AuthBasicProvider ldap file
+         
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+          
+        AuthUserFile /x1/svn/asf-committers
+          
+        ### use a different authorization file?
+        AuthzSVNAccessFile /x1/svn/pit-authorization
+          
+        Require valid-user
+      </Location>
+        
+      # infra repo
+      <Location /repos/infra>
+        DAV svn
+        SVNPath /x1/svn/repos/infra
+        
+        SetOutputFilter DEFLATE
+          
+        AuthName "ASF Committers"
+        AuthType Basic
+        AuthBasicProvider ldap file
+          
+        AuthLDAPurl "ldaps://ldap-us-ro.apache.org ldap-eu-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        #AuthzLDAPAuthoritative off
+          
+        #Fall back to to using the local htpasswd file if LDAP fails.
+        AuthUserFile /x1/svn/asf-committers
+          
+        ### use a different authorization file?
+        AuthzSVNAccessFile /x1/svn/pit-authorization
+          
+        Require valid-user
+        Satisfy any
+          
+        # Always require authentication on non-read access 
+        #    <LimitExcept GET OPTIONS PROPFIND REPORT>
+        #      Require valid-user
+        #    </LimitExcept>
+      </Location>
+          
+        # Needed for sync
+      <Location /repos/infra-proxy-sync>
+        DAV svn
+        SVNPath /x1/svn/repos/infra
+        Order deny,allow
+        Allow from 140.211.11.105
+        Deny from all
+          
+        AuthName "ASF sync"
+        AuthType Basic
+        AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require user asf-sync-process
+      </Location>
+        
+      # These are the infrastructure web forms which are committers-only
+      <Location /dev/forms>
+        Order allow,deny
+        Allow from all
+          
+        AuthName "ASF SVN Committers"
+        AuthType Basic
+        #AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require valid-user
+      </Location>
+        
+      <Location /dyn/asf-mailer.cgi>
+        Order allow,deny
+        Allow from all
+          
+        AuthName "ASF SVN Committers"
+        AuthType Basic
+        #AuthBasicProvider file
+        AuthUserFile /x1/svn/asf-committers
+        Require valid-user
+      </Location>
+
+      <Location "/server-status">
+        SetHandler server-status
+        Require local
+      </Location>
+
+

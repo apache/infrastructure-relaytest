@@ -1,0 +1,15 @@
+[Unit]
+Description=Buildbot Daemon
+After=multi-user.target
+
+[Service]
+Type=forking
+ExecStart=/bin/bash -c "cd /x1/buildmaster && source bin/activate && buildbot start master1"
+User=buildmaster
+Restart=always
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

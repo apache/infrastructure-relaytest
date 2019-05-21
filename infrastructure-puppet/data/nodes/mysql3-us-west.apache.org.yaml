@@ -1,0 +1,68 @@
+---
+classes:
+  - datadog_agent::integrations::mysql
+  - mysql::server
+  - mysql_asf::backup
+  - zmanda_asf::client
+
+mysql_asf::backup::rsync_offsite: 'true'
+mysql_asf::backup::rsync_user: 'apb-mysql3-us-west'
+
+
+datadog_agent::integrations::mysql::host: "%{::ipaddress_eth1}"
+datadog_agent::integrations::mysql::user: 'datadog'
+datadog_agent::integrations::mysql::replication: 1
+
+
+mysql::server::override_options:
+  mysqld:
+    ft_min_word_len: 2
+    bind-address: "%{::ipaddress_eth1}"
+    server-id: 1
+    binlog-format: 'mixed'
+    log_bin: '/var/log/mysql/mysql-bin.log'
+    innodb_flush_log_at_trx_commit: '1'
+    sync_binlog: '1'
+    binlog-ignore-db: 'mysql'
+    expire-logs-days: '2'
+    character-set-server: 'utf8'
+    max_allowed_packet: '256M'
+    max_connections: '1024'
+    performance_schema: 'ON'
+    innodb_buffer_pool_size: '2048M'
+    innodb_log_file_size: '512M'
+    binlog_cache_size: '128M'
+    query_cache_size: '32M'
+    query_cache_limit: '4M'
+  mysqldump:
+    max_allowed_packet: '64M'
+
+mysql::server::databases:
+  cwiki_test:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  cwiki:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  archiva:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  asfblogs:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  asfbuildbot:
+    ensure: 'absent'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  reviewboard:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'
+  openmeetings:
+    ensure: 'present'
+    charset: 'utf8'
+    collate: 'utf8_bin'

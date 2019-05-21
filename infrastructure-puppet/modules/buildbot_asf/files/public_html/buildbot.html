@@ -1,0 +1,195 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<link rel="stylesheet" href="compressed.css" type="text/css" media="screen, projection"/>
+	<link rel="stylesheet" href="style.css" type="text/css" media="screen, projection"/>
+	<!--[if IE]><link rel="stylesheet" href="../style/ie.css" type="text/css" media="screen, projection"/><![endif]-->
+    <title>Build Services - The Apache Software Foundation</title>
+
+</head>
+<body id="sub">
+  <div class="navigation">
+    <ul>
+      <li><a href="../" title="Build Services Home">Home</a></li>
+      <li><a href="https://builds.apache.org/" title="Jenkins">Jenkins</a></li>
+      <li><a href="../buildbot.html" title="Buildbot">Buildbot</a></li>
+      <li><a href="http://vmgump.apache.org" title="Gump">Gump</a></li>
+      <li><a href="https://blogs.apache.org/foundation/" title="Foundation Blog">ASF Blog</a></li>
+      <li><a href="https://blogs.apache.org/" title="Project Blogs">Project Blogs</a></li>
+    </ul>
+  </div>
+  <div class="container">
+  <hr class="space col"/>
+    <div class="block">
+      <div class="column span-24">
+        <div id="header">
+        <!-- Add 'default' header section here. -->
+          <h1>Welcome to Buildbot!</h1>
+        </div>
+      </div>
+    </div>
+    <hr/>
+    <div class="block">
+      <div class="column span-8 prepend-16 search searchsub">
+        <form action="http://www.google.com/search" method="get">
+          <input value="*.apache.org" name="sitesearch" type="hidden"/>
+          <input size="10" name="q" id="query" type="text"/>
+          <input name="Search" value="Go" type="submit"/>
+        </form>
+      </div>
+    </div>
+    <div class="block content">
+      <div class="column span-15 colborder">
+        <h3 id="intro">Introduction</h3>
+        <div class="section-content">
+          <p>Welcome to the ASF Buildbot Instance. Projects are welcome to sign up to have their projects make use of Buildbot.</p>
+          <p>A summary of just some of the things the ASF Buildbot can do for your project:
+          <ul>
+            <li>Perform per commit build &amp; test runs for your project</li>
+            <li>Not just svn! - Buildbot can pull in from your Git/Mercurial branches too!</li>
+            <li>Build and Deploy your website to a staging area for review</li>
+            <li>Build and Deploy your website to mino (people) for syncing live</li>
+            <li>Automatically Build and Deploy Snapshots to Nexus staging area.</li>
+            <li>Create Nightly and historical zipped/tarred snapshot builds for download</li>
+            <li>Builds can be triggered manually from within your own freenode #IRC Channel</li>
+            <li>An IRCBot can report on success/failures of a build instantly</li>
+            <li>Build Success/Failures can go to your dev/notification mailing list</li>
+            <li>Perform multiple builds of an svn/git commit on multiple platforms asyncronously</li>
+            <li>ASF Buildbot uses the latest <a href="http://creadur.apache.org/rat">RAT</a> build to check
+              for license header issues for all your files.
+              <ul>
+                <li>RAT Reports are published live instantly to ci.apache.org/$project/rat-report.[xml|html]</li>
+                <li>As indicated above, source xml or html versions of RAT reports are published.</li>
+              </ul>
+            </li>
+          </ul>
+          </p>
+          <p>Don't see a feature that you need? Join the <a href="mailto:builds-subscribe@apache.org">builds.at.apache.org</a>
+            mailing list and request it now, or file a <a href="http://issues.apache.org/jira/browse/INFRA/component/12312782">Jira Ticket.</a></p>
+          <p>Help is always on hand on the <a href="mailto:builds@apache.org">builds.at.apache.org</a> mailing list for any problems or
+            build configuration issues/requests. Or try the #asftest channel on irc.freenode.net for live support.</p>
+          <p>So now you want your project to use Buildbot? No problem, best way is to file a <a href="http://issues.apache.org/jira/browse/INFRA/component/12312782">Jira Ticket.</a>
+            and count to 10 (well maybe a bit longer but it wont be long before you are up and running).</p>
+        </div>
+        <h4 id="views">Below are links to various views of build results and build information</h4>
+        <div class="section-content">
+          <ul>
+            <li>the <a href="waterfall">Waterfall Display</a> will give you a time-oriented summary of recent buildbot activity.</li>
+            <li>the <a href="grid">Grid Display</a> will give you a developer-oriented summary of recent buildbot activity.</li>
+            <li>The <a href="one_box_per_builder">Latest Build</a> for each builder is here.</li>
+            <li><a href="one_line_per_build">Recent Builds</a> are summarized here, one per line.</li>
+            <li><a href="buildslaves">Buildslave</a> information</li>
+            <li><a href="changes">ChangeSource</a> information.</li>
+            <li><a href="console">Console View</a> (experimental).</li>
+            <li><a href="projects">Generated Docs and RAT reports</a> for projects that generate these as part of their build/test cycle on Buildbot.</li>
+            <br />
+            <li><a href="about">About this Buildbot</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="column span-8 last">
+        <div class="block">
+          <div class="nav column span-11">
+            <div>
+              <div class="menuheader">Apache Projects</div>
+                <ul>
+                  <li><a href="https://projects.apache.org" title="Apache projects directory listing">Apache Projects Directory Listing</a></li>
+                </ul>
+                <h6><a href="/foundation/">Foundation</a></h6>
+                <ul>
+                  <li><a href="http://apache.org/foundation/faq.html">FAQ</a></li>
+                  <li><a href="http://apache.org/licenses/">Licenses</a></li>
+                  <li><a href="http://apache.org/foundation/news.html">News</a></li>
+                  <li><a href="http://blogs.apache.org/foundation/">Blog</a></li>
+                  <li><a href="http://apache.org/foundation/records/">Public Records</a></li>
+                  <li><a href="http://apache.org/press/">Press Inquiries</a></li>
+                  <li><a href="http://apache.org/foundation/contact.html">Contact</a></li>
+                </ul>
+                <h6><a href="http://apache.org/foundation/support-apache.html">Support Apache</a></h6>
+                <ul>
+                  <li><a href="http://apache.org/foundation/sponsorship.html">Sponsorship</a></li>
+                  <li><a href="http://apache.org/foundation/contributing.html">Donations</a></li>
+                  <li><a href="http://apache.org/foundation/buy_stuff.html">Buy Stuff</a></li>
+                  <li><a href="http://apache.org/foundation/thanks.html">Thanks</a></li>
+                </ul>
+              </div>
+            </div>
+            <div class="nav column prepend-1 span-12 last">
+              <h6><a href="http://apache.org/foundation/foundation-projects.html">Foundation Projects</a></h6>
+              <ul>
+                <li><a href="http://attic.apache.org/" title="Inactive project repository">Attic</a></li>
+                <li><a href="http://apache.org/foundation/conferences.html" title="Meetings of developers and users">Conferences</a></li>
+                <li><a href="http://community.apache.org/" title="Helping newcomers to the ASF">Community Development</a></li>
+                <li><a href="http://incubator.apache.org/" title="Shepherd for new projects">Incubator</a></li>
+                <li><a href="http://apache.org/dev/" title="ASF Infrastructure: Operations and howto documents for PMCs and contributors">Infrastructure</a></li>
+                <li><a href="http://apache.org/jcp/" title="Apache and the Java Community Process">JCP</a></li>
+                <li><a href="http://labs.apache.org/" title="The Innovation Laboratories of the Apache Software Foundation">Labs</a></li>
+                <li><a href="http://apache.org/legal/" title="Legal Affairs">Legal Affairs</a></li>
+                <li><a href="http://apache.org/security/" title="Security">Security</a></li>
+                <li><a href="http://apache.org/travel/" title="Travel Assistance">Travel Assistance</a></li>
+              </ul>
+              <h6>How it works</h6>
+              <ul>
+                <li><a href="http://apache.org/foundation/how-it-works.html">Introduction</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#meritocracy">Meritocracy</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#structure">Structure</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#roles">Roles</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#management">Collaboration</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#infrastructure">Infrastructure</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#incubator">Incubator</a></li>
+                <li><a href="http://apache.org/foundation/how-it-works.html#other">Other entities</a></li>
+                <li><a href="http://apache.org/foundation/glossary.html">Glossary</a></li>
+               <li><a href="http://apache.org/foundation/voting.html">Voting</a></li>
+             </ul>
+             <h6><a href="http://apache.org/foundation/getinvolved.html">Get Involved</a></h6>
+             <ul>
+               <li><a href="http://apache.org/dyn/closer.cgi">Download</a></li>
+               <li><a href="http://apache.org/foundation/mailinglists.html">Mailing Lists</a></li>
+               <li><a href="http://apache.org/dev/version-control.html">Version Control</a></li>
+               <li><a href="http://apache.org/dev/">Developer Info</a></li>
+             </ul>
+             <h6>Community</h6>
+             <ul>
+               <li><a href="http://people.apache.org/">People</a></li>
+               <li><a href="http://apache.org/memorials/">Memorials</a></li>
+             </ul>
+             <h6>Related Sites</h6>
+             <ul>
+               <li><a href="http://apachecon.com/" title="Official Apache Conference">ApacheCon</a></li>
+               <li><a href="http://feathercast.org/" title="Apache Podcasts">Feathercast</a></li>
+               <li><a href="http://planet.apache.org/committers/" title="Apache Committers' Blogs">PlanetApache</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="column span-24 footer">
+        <hr/>
+        <p>Copyright &#169; 2010-2018 The Apache Software Foundation, Licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+
+

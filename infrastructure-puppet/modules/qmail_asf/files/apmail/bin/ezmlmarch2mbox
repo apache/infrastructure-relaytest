@@ -1,0 +1,249 @@
+#!/usr/bin/perl
+
+############################
+#  script to convert ezmlm archive directories into an mbox
+#  v.1 ms, oct.2 00.
+############################
+
+use strict; 
+use Getopt::Long;
+
+use Time::Piece;
+
+my (%options, %openfiles);
+
+showUsage() unless
+    GetOptions(\%options, 'directory=s', 'output=s', 'list=s',
+               'emulatefrom', 'monthly', 'addcomment', 'help');
+
+showUsage() if $options{help};
+my $output = $options{output} || "mbox";
+my $directory = $options{directory} || ".";
+my $monthly = $options{monthly} || 0;
+my $addcomment = $options{addcomment} || 0;
+my $list = $options{list} || die "$0: missing required --list=<list> option";
+my $emulate_from = $options{emulatefrom} || 0;
+my $list_info;
+my $list_prefix;
+my $list_domain;
+my $extracted_at;
+
+if ($addcomment) { # fetch the time once
+  $extracted_at = gmtime->strftime();
+}
+
+if ($list eq 'useoutfiles') {
+
+    $list_prefix = read_string("$directory/outlocal");
+    $list_domain = read_string("$directory/outhost");
+    $list_info = slurp("$directory/headeradd");
+    $list_info =~ s/<#l#>/$list_prefix/g;
+    $list_info =~ s/<#h#>/$list_domain/g;
+
+} else {
+    
+    # The headers are normally generated from the headeradd file.
+    # A common example looks like this:
+    # ==
+    # Precedence: bulk
+    # List-Help: <mailto:<#l#>-help@<#h#>>
+    # List-Unsubscribe: <mailto:<#l#>-unsubscribe@<#h#>>
+    # List-Post: <mailto:<#l#>@<#h#>>
+    # List-Id: <<#l#>.<#h#>>
+    # Reply-To: <#l#>@<#h#>
+    # ==
+    
+    ($list_prefix, $list_domain) = split /\@/, $list;
+    $list_info = <<EOT;
+Precedence: bulk
+List-Help: <mailto:$list_prefix-help\@$list_domain>
+List-Unsubscribe: <mailto:$list_prefix-unsubscribe\@$list_domain>
+List-Post: <mailto:$list>
+List-Id: <$list_prefix.$list_domain>
+Reply-To: $list
+EOT
+
+}
+
+
+my $mboxname = $output;
+open($mboxname, "> $mboxname") if (!$monthly);
+
+print "Indexing $directory to $output...\n";
+opendir(DIR, "$directory/archive")
+    or die "unable to read $directory/archive: $!";
+my @subdirs = sort { $a <=> $b } (grep /^\d+$/, readdir(DIR));
+closedir(DIR);
+my @archive_dirs = map "$directory/archive/$_", @subdirs;
+foreach my $dir (@archive_dirs) {
+    indexEzmlmArchiveSubdir($dir);
+}
+exit;
+
+sub indexEzmlmArchiveSubdir {
+    my ($dir) = @_;
+
+    my $headers_ref = readIndexFile($dir);
+
+    opendir(DIR, $dir) or die "unable to read $dir: $!\n";
+    my @files = sort { $a <=> $b } (grep /^\d+/, readdir(DIR));
+    closedir(DIR);
+#    print "files @files\n";
+    # this is kind of annoying, but we've also go a script which creates
+    # symlinks to the actual archive files, so the directory is MH friendly. 
+    # ignore symlinks.
+    @files = grep { ! -l "$_" } (map "$dir/$_", @files);
+#    print "files @files\n";
+    foreach(my $i=0; $i <= $#files; $i++){
+        includeEzmlmArchiveFile("$files[$i]", $headers_ref->[$i]);
+    }
+    return;
+}
+
+# readIndexFile takes as an argument the archive subdir directory, and
+# responds back with a list of headers for the messages in that
+# directory, in sequence.  The format of those headers is tweaked to
+# match what the mbox format looks like, prepended by the mbox date
+# string should --monthly be needed.
+
+sub readIndexFile {
+    my ($dir) = @_;
+    my @headers;
+
+    open INDEX, "$dir/index" or
+        die "unable to open index file in $dir, error [ $! ]\n";
+    # go through maildir's index and create valid email envelopes.
+    while(<INDEX>){          
+
+        # skip lines not beginning with blanks, as those are the lines
+        # we want.
+        next unless m/^\s/;
+        chomp;
+
+        # nuke out that intro blank space.
+        s/^\s*//;
+
+        # sanity check to make sure the basic format of the line is right.
+        # e.g. "15 Oct 2016 17:19:03 -0000;ddfokdfmpenjejkdbbng asfgit"
+        if (/\d+\s+\w+\s+\d+/) {
+            my $t = Time::Piece->strptime((split(';', $_))[0], "%d %b %Y %T %z");
+            push @headers, $t->strftime("%Y%m %a %b %e %T %Y");
+        } else {
+            die "error reading $dir/index: failed to match $_\n";
+        }
+    }
+    close INDEX;
+    return \@headers;
+}
+
+sub includeEzmlmArchiveFile {
+    my ($file, $mboxnumandheader) = @_;
+
+    my ($mboxnum, $header) = split(/ /, $mboxnumandheader, 2);
+    open MSG, $file  or die "Cannot open $file, error [ $! ]\n";
+    my $return_path = <MSG>;
+    if (!($return_path =~ m/Return-Path:\s*<(.*)>/)) {
+        die "unable to match return-path from : $return_path\n";
+    }
+    my $return = $1;
+
+    if ($emulate_from) {
+        my ($unit,$cent)=(split(/\//, $file))[-1,-2];
+        my ($name, undef) = split(/\./, $list_domain, 2);
+        my $num = "$cent$unit";
+        $num =~ s/^0+//;
+        if ($list_domain eq 'apachecon.com') {
+            $name = 'apachecon';
+            # announce-return-196-apmail-apachecon-announce-archive=apachecon.com@apachecon.com
+            $return="$list_prefix-return-$num-apmail-$name-$list_prefix-archive=$list_domain\@$list_domain";
+        } elsif ($name eq 'apache') {
+            $return="$list_prefix-return-$num-apmail-$list_prefix-archive=apache.org\@$list_domain";
+        } else {
+            $return="$list_prefix-return-$num-apmail-$name-$list_prefix-archive=$name.apache.org\@$list_domain";
+        }
+        $return_path="Return-Path: <$return>\n";
+    } else {
+    }    
+
+    my $full_header = "From $return  $header\n";
+
+    if ($monthly) {
+        $mboxname = $openfiles{"$output$mboxnum"};
+        unless (defined $mboxname) {
+            open($mboxname, "> $output$mboxnum");
+            print "opening > $output$mboxnum\n";
+            $openfiles{"$output$mboxnum"} = $mboxname;
+        }
+    } 
+
+    print $mboxname "$full_header";
+    print $mboxname "$return_path";
+    if ($addcomment) {
+      print $mboxname "X-ASF-comment: extracted from ezmlm archive at $extracted_at\n";
+    }
+    print $mboxname "$list_info";
+    while (<MSG>) {
+       s/^(>*From )/>$1/; # escape From_ body lines using mboxrd convention
+       # mboxrd allows for reversible conversion if treated as such
+       # Other combinations only work for plain '^From '
+       print $mboxname $_;
+    }
+    print $mboxname "\n";
+    close MSG;
+}
+
+sub slurp {
+    my $file=shift;
+    local $/ = undef;
+    open FILE, '<', $file or die "Couldn't open $file: $!";
+    binmode FILE;
+    my $string = <FILE>;
+    close FILE;
+    return $string;
+}
+
+sub read_string {
+    my $file=shift;
+    open FILE, '<', $file or die "Couldn't open $file: $!";
+    my $string = <FILE>;
+    chomp $string;
+    close FILE;
+    return $string;
+}
+
+sub showUsage {
+    print <<EOF;
+Usage: index2mbox.pl [--list l] [--directory dir] [--output file] [--monthly] [--emulatefrom] [--addcomment]
+
+list is the name of the list, and is required. e.g. dev\@httpd.apache.org
+Alternatively, the string 'useoutfiles' means to use the contents of outhost/outlocal
+In which case, the script also parses headeradd to generate the headers
+
+directory is the ezmlm list directory (archive must be a subdirectory of it).
+the default is the current directory.
+
+output is the name of the mbox file to which to write.  mbox is the default.
+
+Use --addcomment to add header of the form:
+
+X-ASF-comment: extracted from ezmlm archive on <date>
+
+add --monthly if you want it saving to monthly mbox files, whose name format
+is mbox.YYYYMM (e.g. arch.200012, or use --output ./ to create files named
+200012, etc.
+
+add --emulatefrom to generate the standard From and Return-Path lines such as:
+
+From {list}-return-N-apmail-{name}-{list}-archive={name}.apache.org\@{domain}  Tue May 31 05:10:56 2016
+Return-Path: <{list}-return-N-apmail-{name}-{list}-archive={name}.apache.org\@{domain}>
+
+or
+
+From announce-return-196-apmail-apachecon-announce-archive=apachecon.com\@apachecon.com  Mon May 15 12:53:52 2017
+Return-Path: <announce-return-196-apmail-apachecon-announce-archive=apachecon.com\@apachecon.com>
+
+Note: it looks like this format started around July 2006; earlier archives have From/R-P set to the original sender
+rather than the mailing list bounce address.
+EOF
+    exit;
+}

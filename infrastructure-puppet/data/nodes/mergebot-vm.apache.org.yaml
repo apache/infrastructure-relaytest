@@ -1,0 +1,8 @@
+---
+
+base::basepackages:
+  - 'python3'
+  - 'tmux'
+  - 'build-essential'
+  - 'ruby-dev'
+  - 'libgmp3-dev'

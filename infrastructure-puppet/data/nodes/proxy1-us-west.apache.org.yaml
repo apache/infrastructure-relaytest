@@ -1,0 +1,255 @@
+---
+classes:
+  - apache
+  - apache::mod::authnz_ldap
+  - apache::mod::headers
+  - apache::mod::proxy
+  - apache::mod::proxy_http
+  - apache::mod::rewrite
+  - blocky
+  - loggy
+  - postgresql::client
+  - ssl::name::wildcard_apache_org
+  - ssl::name::allura_selfsigned
+  - ssl::name::bloodhound_ca
+  - vhosts_asf::modules
+  - vhosts_asf::vhosts
+
+apache::logroot: '/x1/apache2'
+apache::default_vhost: false
+apache::default_ssl_cert:                    '/etc/ssl/certs/wildcard.apache.org.crt'
+apache::default_ssl_chain:                   '/etc/ssl/certs/wildcard.apache.org.chain'
+apache::default_ssl_key:                     '/etc/ssl/private/wildcard.apache.org.key'
+
+apache::mpm_module:         'event'
+
+apache::mod::event::listenbacklog: '511'
+apache::mod::event::maxclients: '1000'
+apache::mod::event::maxconnectionsperchild: '200000'
+apache::mod::event::maxrequestworkers: '1000'
+apache::mod::event::maxsparethreads: '250'
+apache::mod::event::minsparethreads: '150'
+apache::mod::event::serverlimit: '20'
+apache::mod::event::startservers: '5'
+apache::mod::event::threadlimit: '1000'
+apache::mod::event::threadsperchild: '50'
+
+base::basepackages:
+  - issues-data
+  - 'lua5.2'
+  - 'liblua5.2-dev'
+  - 'lua5.2-cjson'
+  - 'lua5.2-socket'
+  - 'lua5.2-sec'
+  - 'mod-lua-asf'
+
+
+logrotate::rule:
+  apache2:
+    ensure: 'present'
+    path: '/x1/apache2/*.log'
+    delaycompress: true
+    ifempty: false
+    rotate: 3
+
+vhosts_asf::modules::modules:
+  substitute:
+    name: 'substitute'
+  lua:
+    name: 'lua'
+
+vhosts_asf::vhosts::vhosts:
+  comments:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 80
+    docroot: '/var/www/html'
+    servername: 'comments.apache.org'
+    serveradmin: 'webmaster@apache.org'
+    access_log_file: 'comments.apache.org.http_access.log'
+    error_log_file: 'comments.apache.org.error.log'
+    custom_fragment: |
+      Redirect / https://comments.apache.org/
+
+  comments-ssl:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 443
+    ssl: true
+    docroot: '/var/www/html'
+    servername: 'comments.apache.org'
+    serveradmin: 'webmaster@apache.org'
+    access_log_file: 'comments.apache.org.ssl_access.log'
+    error_log_file: 'comments.apache.org.error.log'
+    custom_fragment: |
+      ProxyPreserveHost on
+
+      ProxyPassMatch ^/(?!committers\.lua)(.*)$ http://192.168.0.62:8080/$1 retry=0 timeout=60
+
+      # Protect cookies - not sure this is needed yet
+      <Location / >
+        Header edit Set-Cookie (^.*$) "$1; Secure"
+      </Location>
+
+        <Location /committers.lua>
+          # Require LDAP authentication for /committers.lua
+          AuthLDAPUrl "ldaps://ldap-us-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+          AuthLDAPRemoteUserAttribute uid
+          AuthName "ASF Committers"
+          AuthType Basic
+          AuthBasicProvider ldap
+          Require valid-user
+
+          # Pass on X-Authenticated-User to backend server
+          RewriteEngine On
+          RewriteRule .* - [E=PROXY_USER:%%{}{LA-U:REMOTE_USER}]
+          RequestHeader set X-Authenticated-User %%{}{PROXY_USER}e
+
+          # Remove Authorization header to prevent passwords from being transmitted
+          RequestHeader unset Authorization
+          ProxyPass http://192.168.0.62:8080/committers.lua retry=0 timeout=60
+        </Location>
+
+  projects:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 80
+    servername: 'projects.apache.org'
+    serveraliases:
+      - 'projects-new.apache.org'
+    serveradmin: 'dev@community.apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'projects.apache.org.http_access.log'
+    error_log_file: 'projects.apache.org.error.log'
+    custom_fragment: |
+      RewriteEngine On
+      RewriteCond %%{}{HTTP_HOST} ^(.*)$
+      RewriteRule ^/(.*)$ https://%1/$1 [R=301,L]
+
+  projects-ssl:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 443
+    ssl: true
+    servername: 'projects.apache.org'
+    serveraliases:
+      - 'projects-new.apache.org'
+    serveradmin: 'dev@community.apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'projects.apache.org.ssl_access.log'
+    error_log_file: 'projects.apache.org.error.log'
+    custom_fragment: |
+      <Location /edit>
+        AuthType Basic
+        AuthName "ASF Committers"
+        AuthBasicProvider ldap
+        AuthLDAPUrl "ldaps://ldap-us-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPGroupAttribute member
+        AuthLDAPGroupAttributeIsDN on
+        Require ldap-group cn=committers,ou=groups,dc=apache,dc=org
+
+        # Pass on X-Authenticated-User to backend server
+        RewriteEngine On
+        RewriteRule .* - [E=PROXY_USER:%%{}{LA-U:REMOTE_USER}]
+        RequestHeader set X-Authenticated-User %%{}{PROXY_USER}e
+        RequestHeader unset Authorization
+      </Location>
+
+      ProxyPass / http://projects-vm.apache.org/
+      ProxyPassReverse / http://projects-vm.apache.org/
+      ProxyPreserveHost On
+
+  reporter:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 80
+    servername: 'reporter.apache.org'
+    serveradmin: 'dev@community.apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'reporter.apache.org.http_access.log'
+    error_log_file: 'reporter.apache.org.error.log'
+    custom_fragment: |
+      Redirect permanent / https://reporter.apache.org/
+
+  reporter-ssl:
+    vhost_name: '*'
+    ensure: 'present'
+    port: 443
+    ssl: true
+    servername: 'reporter.apache.org'
+    serveradmin: 'dev@community.apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'reporter.apache.org.ssl_access.log'
+    error_log_file: 'reporter.apache.org.error.log'
+    custom_fragment: |
+      ProxyPass / http://projects-vm.apache.org/
+      ProxyPassReverse / http://projects-vm.apache.org/
+      ProxyPreserveHost On
+
+      <Location />
+        AuthLDAPUrl "ldaps://ldap-us-ro.apache.org/ou=people,dc=apache,dc=org?uid"
+        AuthLDAPRemoteUserAttribute uid
+        AuthName "ASF Committers"
+        AuthType Basic
+        AuthBasicProvider ldap
+        Require valid-user
+
+        # Pass on X-Authenticated-User to backend server
+        RewriteEngine On
+        RewriteRule .* - [E=PROXY_USER:%%{}{LA-U:REMOTE_USER}]
+        RequestHeader set X-Authenticated-User %%{}{PROXY_USER}e
+        RequestHeader unset Authorization
+      </Location>
+
+  whimsy-old:
+    vhost_name: '*'
+    ensure: 'absent'
+    port: 80
+    servername: 'whimsy-old.apache.org'
+    serveraliases:
+      - 'infra.apache.org'
+      - 'infrastructure.apache.org'
+      - 'whimsy.apache.org'
+    serveradmin: 'webmaster@apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'whimsy-old.apache.org.http_access.log'
+    error_log_file: 'whimsy-old.apache.org.error.log'
+    custom_fragment: |
+      RewriteEngine On
+      RewriteCond %%{}{HTTP_HOST} ^(.*)$
+      RewriteRule ^/(.*)$ https://%1/$1 [R=301,L]
+
+  whimsy-old-ssl:
+    vhost_name: '*'
+    ensure: 'absent'
+    port: 443
+    ssl: true
+    servername: 'whimsy-old.apache.org'
+    serveraliases:
+      - 'infra.apache.org'
+      - 'infrastructure.apache.org'
+      - 'whimsy.apache.org' 
+    serveradmin: 'webmaster@apache.org'
+    docroot: '/var/www/html'
+    access_log_file: 'whimsy-old.apache.org.https_access.log'
+    error_log_file: 'whimsy-old.apache.org.error.log'
+    custom_fragment: |
+      ProxyPass / http://whimsy-vm.apache.org/
+      ProxyPassReverse / http://whimsy-vm.apache.org/
+      ProxyPreserveHost On
+      ProxyVia On
+
+fail2ban_asf::config::jails:
+  jira:
+    filter: asf-jira
+    action:
+      - iptables-allports
+    logpath: /usr/local/etc/aardvark/spammers.txt
+    findtime: 3600
+    maxretry: 1
+    enable: true
+
+fail2ban_asf::config::filters:
+  asf-jira:
+    filterfailregex: |
+      <HOST> spammed Aardvark
