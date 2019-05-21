@@ -1,2 +1,0 @@
-
-class ldap::os::debian {}
