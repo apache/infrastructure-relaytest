@@ -1,0 +1,19 @@
+---
+Rakefile:
+  unmanaged: true
+spec/spec_helper.rb:
+  unmanaged: true
+appveyor.yml:
+  matrix_extras:
+    - PUPPET_GEM_VERSION: 4.2.3
+      RUBY_VER: 21-x64
+  test_script:
+    - 'bundle exec rspec spec/unit -fd -b'
+MAINTAINERS.md:
+  maintainers:
+    - "Puppet Windows Team `windows |at| puppet |dot| com`"
+NOTICE:
+  copyright_holders:
+    - name: 'Puppet, Inc.'
+      begin: 2012
+      end: 'latest'
