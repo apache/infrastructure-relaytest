@@ -1,8 +1,0 @@
-# Rate limiter implemented as filter
-LuaScope conn
-LuaQuickHandler /var/www/rate-limit.lua before
-LuaOutputFilter COUNTER /var/www/rate-limit.lua after
-<Location />
-   SetOutputFilter COUNTER
-</Location>
-

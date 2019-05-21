@@ -1,8 +1,0 @@
----
-
-dnsclient::nameservers:
-  - '8.8.8.8'
-  - '8.8.4.4'
-
-ldapclient::ldapservers: 'ldaps://ldap-eu-ro.apache.org:636 ldaps://ldap-us-ro.apache.org:636'
-

@@ -1,2 +1,0 @@
-#disable_html_escaping()
-[$eventTypeName] ($issue.key) $issue.summary

@@ -1,7 +1,0 @@
----
-
-dnsclient::searchorder: 'apache.org'
-
-dnsclient::nameservers:
-  - '8.8.8.8'
-  - '8.8.4.4'

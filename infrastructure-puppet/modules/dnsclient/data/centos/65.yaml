@@ -1,6 +1,0 @@
----
-
-dnsclient::packages:
-  - 'bind-utils'
-
-dnsclient::dhclienthooksfile: '/etc/dhcp/dhclient-enter-hooks'

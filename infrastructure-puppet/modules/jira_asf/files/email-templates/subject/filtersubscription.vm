@@ -1,2 +1,0 @@
-#disable_html_escaping()
-#text('template.subscription.header.name'): ${searchRequest.getName()}

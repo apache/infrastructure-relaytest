@@ -1,5 +1,0 @@
----
-
-base::basepackages:
-  - libpcap0.8
-  - libpcap0.8-dev

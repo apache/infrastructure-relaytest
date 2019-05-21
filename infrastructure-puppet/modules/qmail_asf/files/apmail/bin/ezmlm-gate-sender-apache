@@ -1,7 +1,0 @@
-#!/usr/bin/perl
-use File::Basename;
-use lib dirname(dirname $0) . "/lib";
-
-exit 99 if $ENV{SENDER} =~ m/\@apache\.org$/i
-    or eval { require ldap_sender_address_count > 0 };
-$@ and print "LDAP query failed: $@\n" and exit 111;

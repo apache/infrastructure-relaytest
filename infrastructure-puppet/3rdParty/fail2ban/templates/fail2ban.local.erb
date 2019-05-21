@@ -1,7 +1,0 @@
-# This file is managed by Puppet. DO NOT EDIT.
-#
-[Definition]
-loglevel = <%= scope.lookupvar('fail2ban::log_level') %>
-logtarget = <%= scope.lookupvar('fail2ban::log_file') %>
-socket = <%= scope.lookupvar('fail2ban::socket') %>
-pidfile = <%= scope.lookupvar('fail2ban::pid_file') %>

@@ -1,8 +1,0 @@
-fixtures:
-  repositories:
-    stdlib: "https://github.com/puppetlabs/puppetlabs-stdlib.git"
-    concat:
-      repo:   "https://github.com/puppetlabs/puppetlabs-concat.git"
-    staging: "https://github.com/nanliu/puppet-staging.git"
-  symlinks:
-    tomcat: "#{source_dir}"
