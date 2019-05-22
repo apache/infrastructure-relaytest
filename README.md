@@ -1,5 +1,4 @@
 # infrastructure-relaytest
 Infrastructure Relay Test Repo
 
-gwsrd
-wgrsdfzc
+Testing delayed sync, will dobule post on ML...
